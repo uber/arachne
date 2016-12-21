@@ -1,0 +1,20 @@
+language: go
+sudo: required
+go:
+  - 1.6
+  - 1.7
+  - tip
+env:
+  global:
+    - UBER_ENVIRONMENT=production
+    - UBER_CONFIG_DIR=./daemon/config
+cache:
+  directories:
+    - vendor
+install:
+  - make dependencies
+script:
+  - make lint
+  - make test
+after_success:
+  - make coveralls

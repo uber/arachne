@@ -1,0 +1,84 @@
+hash: dab58a5114e62592230f262fd6e34725a9f3915919353f6d4b63c58b2bd94d4e
+updated: 2016-12-22T14:59:21.082223135-08:00
+imports:
+- name: github.com/DataDog/datadog-go
+  version: 909c02b65dd8a52e8fa6072db9752a112227cf21
+  subpackages:
+  - statsd
+- name: github.com/fatih/color
+  version: dea9d3a26a087187530244679c1cfb3a42937794
+- name: github.com/fsnotify/fsnotify
+  version: 629574ca2a5df945712d3079857300b5e4da0236
+- name: github.com/hashicorp/hcl
+  version: 80e628d796135357b3d2e33a985c666b9f35eee1
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/scanner
+  - hcl/strconv
+  - hcl/token
+  - json/parser
+  - json/scanner
+  - json/token
+- name: github.com/jawher/mow.cli
+  version: 772320464101e904cd51198160eb4d489be9cc49
+- name: github.com/magiconair/properties
+  version: 9c47895dc1ce54302908ab8a43385d1f5df2c11c
+- name: github.com/mattn/go-colorable
+  version: 9056b7a9f2d1f2d96498d6d146acd1f9d5ed3d59
+- name: github.com/mattn/go-isatty
+  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+- name: github.com/miekg/dns
+  version: 5d001d020961ae1c184f9f8152fdc73810481677
+- name: github.com/mitchellh/mapstructure
+  version: bfdb1a85537d60bc7e954e600c250219ea497417
+- name: github.com/pelletier/go-buffruneio
+  version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
+- name: github.com/pelletier/go-toml
+  version: 017119f7a78a0b5fc0ea39ef6be09f03acf3345d
+- name: github.com/spacemonkeygo/monotime
+  version: cdd56516a92a4dc680379a26524c9c3d59d79ec0
+  subpackages:
+  - _cgo
+- name: github.com/spf13/afero
+  version: 2f30b2a92c0e5700bcfe4715891adb1f2a7a406d
+  subpackages:
+  - mem
+- name: github.com/spf13/cast
+  version: 24b6558033ffe202bf42f0f3b870dcc798dd2ba8
+- name: github.com/spf13/jwalterweatherman
+  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
+- name: github.com/spf13/pflag
+  version: 25f8b5b07aece3207895bf19f7ab517eb3b22a40
+- name: github.com/spf13/viper
+  version: 5ed0fc31f7f453625df314d8e66b9791e8d13003
+- name: github.com/uber-go/atomic
+  version: 0c9e689d64f004564b79d9a663634756df322902
+- name: github.com/uber-go/zap
+  version: 8ec65dd53fd33dce854f899316fdb75c7c695fc0
+- name: golang.org/x/sys
+  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: a7c023693a94aedd6b6df43ae7526bfe9d2b7d22
+  subpackages:
+  - transform
+  - unicode/norm
+- name: gopkg.in/validator.v2
+  version: 3e4f037f12a1221a0864cf0dd2e81c452ab22448
+- name: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  subpackages:
+  - assert

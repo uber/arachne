@@ -1,0 +1,57 @@
+{
+  "linters": {
+    "golint": {
+      "type": "golint",
+      "include": "(\\.go$)",
+      "exclude": [
+        "(/.md/)",
+        "(^Godeps/)",
+        "(^client/)",
+        "(/thrift/)"
+      ]
+    },
+    "gofmt": {
+      "type": "gofmt",
+      "include": "(\\.go$)",
+      "exclude": [
+        "(^Godeps/)",
+        "(^client/)",
+        "(/thrift/)"
+       ]
+    },
+    "govet": {
+      "type": "govet",
+      "include": "(\\.go$)",
+      "exclude": [
+        "(^Godeps/)",
+        "(^client/)",
+        "(/thrift/)"
+      ]
+    },
+    "chmod": {
+          "type": "chmod",
+          "include" : "(.*)"
+        },
+    "filename": {
+          "type": "filename",
+          "include" : "(.*)",
+          "exclude": [
+             "(/.md/)",
+             "(^Godeps/)"
+           ]
+    },
+    "json": {
+           "type": "json",
+           "include": "(\\.json$)",
+           "exclude": [
+              "(^Godeps/)"
+            ]
+         },
+    "text": {
+           "type": "text",
+           "include": "(\\.(txt|html|markdown)$)",
+           "exclude": "(^Godeps/)",
+           "text.max-line-length": 80
+    }
+  }
+}

@@ -1,0 +1,16 @@
+arachne:
+  pidPath: /var/run/arachne/arachne.pid
+  orchestrator:
+    addrport: 127.0.0.5:16776
+    restVersion: api/v1
+
+logging:
+  stdout: true
+  level: debug
+  logSink: /tmp/arachne.log
+
+metrics:
+  migration: true
+  statsd:
+    hostPort: 127.0.0.1:4744
+    prefix: arachne

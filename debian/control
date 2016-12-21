@@ -1,0 +1,15 @@
+Source: arachne
+Section: utils
+Priority: optional
+Maintainer: Vasileios Lakafosis <lakafosi@uber.com>
+Standards-Version: 3.9.5
+Homepage: https://github.com/uber/arachne
+Build-Depends: debhelper (>= 9),
+               golang-1.7,
+               git
+
+Package: arachne
+Architecture: any
+Depends: libcap2-bin, ${misc:Depends},
+Description: Arachne is Uber's framework of in-house developed, strategically distributed,
+ light-weight server agents to probe the health of the DC and Cloud infrastructure.
