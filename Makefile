@@ -26,9 +26,6 @@ dependencies:
 	@echo "Installing Glide and locked dependencies..."
 	glide --version || go get -u -f github.com/Masterminds/glide
 	glide install
-	@echo "Installing test dependencies..."
-	go install ./vendor/github.com/axw/gocov/gocov
-	go install ./vendor/github.com/mattn/goveralls
 ifdef SHOULD_LINT
 	@echo "Installing golint..."
 	go install ./vendor/github.com/golang/lint/golint
@@ -63,10 +60,6 @@ endif
 .PHONY: test
 test:
 	go test -race $(PKGS)
-
-.PHONY: coveralls
-coveralls:
-	goveralls -service=travis-ci .
 
 .PHONY: bench
 BENCH ?= .
