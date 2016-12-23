@@ -48,6 +48,7 @@ VET_RULES := -printf=false
 
 .PHONY: test
 test:
+	@rm -rf vendor
 ifdef SHOULD_LINT
 	@rm -rf lint.log
 	@echo "Checking formatting..."
@@ -63,7 +64,6 @@ else
 	@echo "Skipping linters on" $(GO_VERSION)
 endif
 	@echo "Testing..."
-	@rm -rf vendor
 	@go test -i $(PKGS)
 	@go test -race $(PKGS)
 
