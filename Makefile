@@ -63,6 +63,7 @@ else
 	@echo "Skipping linters on" $(GO_VERSION)
 endif
 	@echo "Testing..."
+	@rm -rf vendor
 	@go test -i $(PKGS)
 	@go test -race $(PKGS)
 
