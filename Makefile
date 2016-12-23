@@ -23,12 +23,6 @@ ${builddir}:
 bins:
 	go build -o ${builddir}/arachne-daemon github.com/uber/arachne/daemon/
 
-.PHONY: rungenerate
-rungenerate:
-	go generate $(PKGS)
-
-generate: rungenerate add-license
-
 all: bins
 
 clean:
@@ -38,7 +32,7 @@ vendor: glide.lock
 	glide install
 
 .PHONY: install_ci
-install_ci: add-license
+install_ci:
 	@echo "Installing Glide and locked dependencies..."
 	glide --version || go get -u -f github.com/Masterminds/glide
 	make vendor
@@ -76,14 +70,3 @@ endif
 BENCH ?= .
 bench:
 	@$(foreach pkg,$(PKGS),go test -bench=$(BENCH) -run="^$$" $(BENCH_FLAGS) $(pkg);)
-
-
-vendor/github.com/uber/uber-licence: vendor
-	[ -d vendor/github.com/uber/uber-licence ]
-
-vendor/github.com/uber/uber-licence/node_modules: vendor/github.com/uber/uber-licence
-	cd vendor/github.com/uber/uber-licence && npm install
-
-.PHONY: add-license
-add-license: vendor/github.com/uber/uber-licence/node_modules
-	./vendor/github.com/uber/uber-licence/bin/licence --verbose --file '*.go'
