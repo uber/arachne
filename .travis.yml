@@ -8,10 +8,9 @@ env:
   global:
     - UBER_ENVIRONMENT=production
     - UBER_CONFIG_DIR=./daemon/config
+install: make install_ci
+script: make test
 cache:
   directories:
     - vendor
-install:
-  - make install_ci
-script:
-  - make test
+
