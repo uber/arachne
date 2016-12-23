@@ -12,7 +12,6 @@ cache:
   directories:
     - vendor
 install:
-  - make dependencies
+  - make install_ci
 script:
-  - make lint
   - make test

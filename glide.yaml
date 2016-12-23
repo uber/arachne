@@ -9,6 +9,7 @@ import:
 - package: github.com/miekg/dns
 - package: github.com/spacemonkeygo/monotime
 - package: github.com/spf13/viper
+- package: github.com/uber/uber-licence
 - package: github.com/uber-go/zap
 - package: gopkg.in/validator.v2
 - package: gopkg.in/yaml.v2

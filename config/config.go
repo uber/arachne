@@ -311,7 +311,7 @@ func FetchRemoteList(
 
 		raw, err := ioutil.ReadFile(*gl.CLI.TargetsLocalPath)
 		if err != nil {
-			return fmt.Errorf("File error: %v. Exiting...\n", err)
+			return fmt.Errorf("file error: %v", err)
 		}
 		if err := readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts, minBatchInterval,
 			logger); err != nil {

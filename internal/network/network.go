@@ -139,7 +139,7 @@ func interfaceAddress(af string, name string) (*net.IP, error) {
 
 	addrs, err := iface.Addrs()
 	if err != nil {
-		return nil, fmt.Errorf("iface.Addrs: %s. Exiting...\n", err)
+		return nil, fmt.Errorf("iface.Addrs: %s", err)
 	}
 
 	return findAddrInRange(af, addrs)

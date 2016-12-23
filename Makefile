@@ -12,23 +12,39 @@ ifneq ($(filter $(LINTABLE_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
 SHOULD_LINT := true
 endif
 
+builddir := build
 
-.PHONY: all
-all: lint test
+$(info builddir ${builddir})
 
-DAEMON := daemon/arachne
-PROGS = $(DAEMON)
+${builddir}:
+	mkdir -p $(builddir)
 
-$(PROGS): $(PKG_FILES)
+.PHONY: bins
+bins:
+	go build -o ${builddir}/arachne-daemon github.com/uber/arachne/daemon/
 
-.PHONY: dependencies
-dependencies:
+.PHONY: rungenerate
+rungenerate:
+	go generate $(PKGS)
+
+generate: rungenerate add-license
+
+all: bins
+
+clean:
+	rm -f ${builddir}/*
+
+vendor: glide.lock
+	glide install
+
+.PHONY: install_ci
+install_ci: add-license
 	@echo "Installing Glide and locked dependencies..."
 	glide --version || go get -u -f github.com/Masterminds/glide
-	glide install
+	make vendor
 ifdef SHOULD_LINT
 	@echo "Installing golint..."
-	go install ./vendor/github.com/golang/lint/golint
+	go get -u -f github.com/golang/lint/golint
 else
 	@echo "Not installing golint, since we don't expect to lint on" $(GO_VERSION)
 endif
@@ -36,32 +52,38 @@ endif
 # Disable printf-like invocation checking due to testify.assert.Error()
 VET_RULES := -printf=false
 
-.PHONY: lint
-lint:
+.PHONY: test
+test:
 ifdef SHOULD_LINT
 	@rm -rf lint.log
 	@echo "Checking formatting..."
 	@gofmt -d -s $(PKG_FILES) 2>&1 | tee lint.log
-	@echo "Installing test dependencies for vet..."
-	@go test -i $(PKGS)
 	@echo "Checking vet..."
 	@$(foreach dir,$(PKG_FILES),go tool vet $(VET_RULES) $(dir) 2>&1 | tee -a lint.log;)
 	@echo "Checking lint..."
 	@$(foreach dir,$(PKGS),golint $(dir) 2>&1 | tee -a lint.log;)
 	@echo "Checking for unresolved FIXMEs..."
 	@git grep -i fixme | grep -v -e vendor -e Makefile | tee -a lint.log
-	@echo "Checking for license headers..."
-	@./check_license.sh | tee -a lint.log
 	@[ ! -s lint.log ]
 else
 	@echo "Skipping linters on" $(GO_VERSION)
 endif
-
-.PHONY: test
-test:
-	go test -race $(PKGS)
+	@echo "Testing..."
+	@go test -i $(PKGS)
+	@go test -race $(PKGS)
 
 .PHONY: bench
 BENCH ?= .
 bench:
 	@$(foreach pkg,$(PKGS),go test -bench=$(BENCH) -run="^$$" $(BENCH_FLAGS) $(pkg);)
+
+
+vendor/github.com/uber/uber-licence: vendor
+	[ -d vendor/github.com/uber/uber-licence ]
+
+vendor/github.com/uber/uber-licence/node_modules: vendor/github.com/uber/uber-licence
+	cd vendor/github.com/uber/uber-licence && npm install
+
+.PHONY: add-license
+add-license: vendor/github.com/uber/uber-licence/node_modules
+	./vendor/github.com/uber/uber-licence/bin/licence --verbose --file '*.go'
