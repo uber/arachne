@@ -28,6 +28,7 @@ debian/files
 
 *.exe
 *.test
+*.log
 *.prof
 *.pprof
 
