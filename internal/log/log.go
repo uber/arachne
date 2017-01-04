@@ -118,12 +118,12 @@ func ResetLogFile(logFilePath string, fileSizeMaxMB int, fileSizeKeepKB int, log
 			zap.Error(err))
 		return err
 	}
-	fileSizeMB := (float64)(stat.Size() / (1024 * 1024))
+	fileSize := int(stat.Size())
 
-	if fileSizeMB > float64(fileSizeMaxMB) {
+	if fileSize > fileSizeMaxMB*1024*1024 {
 		logger.Debug("Size of log file is larger than maximum allowed. Resetting.",
 			zap.String("file", logFilePath),
-			zap.Float64("current_size_MB", fileSizeMB),
+			zap.Int("current_size_MB", fileSize),
 			zap.Int("maximum_allowed_size_MB", fileSizeMaxMB))
 
 		buf := make([]byte, fileSizeKeepKB*1024)

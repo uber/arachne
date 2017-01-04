@@ -41,11 +41,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		err error
 	)
 
-	bootstrapLogger := zap.New(
-		zap.NewJSONEncoder(),
-		zap.InfoLevel,
-		zap.Output(os.Stdout),
-	)
+	bootstrapLogger := zap.New(zap.NewJSONEncoder())
 
 	util.PrintBanner()
 
@@ -83,12 +79,12 @@ func Run(ec *config.Extended, opts ...Option) {
 		var (
 			err                 error
 			currentDSCP         tcp.DSCPValue
-			DNSWg               sync.WaitGroup
+			dnsWg               sync.WaitGroup
 			finishedCycleUpload sync.WaitGroup
 		)
 
 		// Channels to tell goroutines to terminate
-		killC := new(util.KillChannel)
+		killC := new(util.KillChannels)
 
 		// If Master mode enabled, fetch JSON configuration file, otherwise try to retrieve default local file
 		err = config.FetchRemoteList(&gl, d.MaxNumRemoteTargets, d.MaxNumSrcTCPPorts,
@@ -107,12 +103,12 @@ func Run(ec *config.Extended, opts ...Option) {
 
 		if gl.RemoteConfig.ResolveDNS && !*gl.CLI.ReceiverOnlyMode {
 			// Refresh DNS resolutions
-			DNSRefresh := time.NewTicker(d.DNSRefreshInterval)
-			DNSWg.Add(1)
+			dnsRefresh := time.NewTicker(d.DNSRefreshInterval)
+			dnsWg.Add(1)
 			killC.DNSRefresh = make(chan struct{})
-			config.ResolveDNSTargets(gl.Remotes, gl.RemoteConfig, DNSRefresh, &DNSWg,
+			config.ResolveDNSTargets(gl.Remotes, gl.RemoteConfig, dnsRefresh, &dnsWg,
 				killC.DNSRefresh, logger)
-			DNSWg.Wait()
+			dnsWg.Wait()
 			logger.Debug("Remotes after DNS resolution include",
 				zap.Int("count", len(gl.Remotes)),
 				zap.Object("remotes", gl.Remotes))

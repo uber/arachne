@@ -21,7 +21,6 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -97,7 +96,7 @@ func ResolveAddr(target string, servers []net.IP, logger zap.Logger) (string, er
 func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (string, error) {
 
 	if servers == nil {
-		return "", errors.New("no alternate DNS servers configured")
+		return "", fmt.Errorf("no alternate DNS servers configured")
 	}
 
 	c := dns.Client{}
@@ -114,7 +113,7 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 			continue
 		}
 		if len(r.Answer) == 0 {
-			err = errors.New("reverse DNS resolution with own server returned no results")
+			err = fmt.Errorf("reverse DNS resolution with own server returned no results")
 			continue
 		}
 		logger.Debug("Reverse DNS resolution for target with user-configured DNS server took",
@@ -128,7 +127,7 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 	}
 	logger.Warn("failed to DNS resolve target with alternate servers",
 		zap.String("target", target))
-	return "", errors.New("failed to DNS resolve " + target + " with alternate servers")
+	return "", fmt.Errorf("failed to DNS resolve %s with alternate servers", target)
 }
 
 func interfaceAddress(af string, name string) (*net.IP, error) {

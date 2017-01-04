@@ -23,7 +23,6 @@ package tcp
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -378,7 +377,7 @@ func checksum(af string, data []byte, srcip, dstip *net.IP) (uint16, error) {
 			6, // protocol number for TCP
 		}...)
 	default:
-		return 0, errors.New("unhandled AF family")
+		return 0, fmt.Errorf("unhandled AF family")
 	}
 
 	body := make([]byte, 0, len(pseudoHeader)+len(data))
@@ -440,7 +439,7 @@ func Receiver(
 		// no IPv6 header present on TCP packets received on the raw socket
 		ipHdrSize = 0
 	default:
-		return errors.New("unhandled AF family")
+		return fmt.Errorf("unhandled AF family")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to create %s receive socket: %s", af, err)
@@ -661,7 +660,7 @@ func echoTargetsWorker(
 	r := reflect.ValueOf(remotes)
 
 	if r.Kind() != reflect.Map {
-		return errors.New("remote interface not a map in echoTargetsWorker()")
+		return fmt.Errorf("remote interface not a map in echoTargetsWorker()")
 	}
 
 	// Echo interval is half the time of the 'real' batch interval
@@ -671,7 +670,7 @@ func echoTargetsWorker(
 	for _, key := range r.MapKeys() {
 		remoteStruct := r.MapIndex(key)
 		if remoteStruct.Kind() != reflect.Struct {
-			return errors.New("remote field not a struct in tcp.EchoTargets()")
+			return fmt.Errorf("remote field not a struct in tcp.EchoTargets()")
 		}
 		dstAddr := net.IP(remoteStruct.FieldByName("IP").Bytes())
 		ext := remoteStruct.FieldByName("External").Bool()
@@ -728,7 +727,7 @@ func send(
 	case "ip6":
 		sendSocket, err = syscall.Socket(syscall.AF_INET6, syscall.SOCK_RAW, syscall.IPPROTO_TCP)
 	default:
-		return errors.New("unhandled AF family")
+		return fmt.Errorf("unhandled AF family")
 	}
 	if err != nil {
 		return err
@@ -745,7 +744,7 @@ func send(
 		copy(sockaddr[:], srcAddr.To16())
 		err = syscall.Bind(sendSocket, &syscall.SockaddrInet6{Port: 0, Addr: sockaddr})
 	default:
-		return errors.New("unhandled AF family")
+		return fmt.Errorf("unhandled AF family")
 	}
 	if err != nil {
 		return err

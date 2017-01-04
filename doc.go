@@ -24,15 +24,7 @@ Package arachne provides a packet loss detection system and an underperforming
 path detection system. It provides fast and easy active end-to-end functional
 testing of all the components in Data Center and Cloud infrastructures.
 Arachne is able to detect intra-DC, inter-DC, DC-to-Cloud, and
-DC-to-External-Services issues by generating minimal traffic:
-
-  - Reachability
-  - Round-trip and 1-way latency
-  - Silent packet drops and black holes
-  - Jitter (average of the deviation from the network mean latency)
-  - PMTU or Firewall issues too related possibly to network config changes
-    (accidental or not)
-  - Network-level SLAs are met?
+DC-to-External-Services issues by generating minimal traffic.
 
 */
 package arachne

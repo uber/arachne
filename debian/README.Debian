@@ -13,7 +13,7 @@ traffic that is the ‘closest’ to the typical type of traffic an Uber applica
 - Silent packet drops and black holes
 - Jitter (average of the deviation from the network mean latency)
 - PMTU or Firewall issues too related possibly to network config changes (accidental or not)
-- Network-level SLAs are met?
+- Whether network-level SLAs are met
 
 Arachne runs on Linux and Darwin (Mac OS X).
 

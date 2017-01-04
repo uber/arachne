@@ -12,24 +12,27 @@ DC-to-External-Services issues by generating minimal traffic:
 - Jitter (average of the deviation from the network mean latency)
 - PMTU or Firewall issues too related possibly to network config changes
 (accidental or not)
-- Network-level SLAs are met?
+- Whether network-level SLAs are met
 
 
 ## Usage
 
+There are two ways to use the Arachne package.
 
-Either import this package and call Arachne from your service with
+## As a standalone program
+Run Arachne as a standalone program (it's Debian packaged already too).
+
+### As a library in your own program
+Import this package and call Arachne from your program/service with
 ```go
     arachne.Run(config, arachne.ReceiverOnlyMode(false))
 ```
 where the option provided above is among the few optional ones,
 
-or run Arachne as a standalone program (it's Debian packaged already too).
 
-Below is the list of all the CLI options available. The default options should
-be good enough for most users.
-
-
+Below is the list of all the CLI options available, when Arachne is 
+used as a standalone program. The default options should be good 
+enough for most users.
 
 ```
 $ arachne --help
@@ -63,31 +66,12 @@ Options:
 ### Note on required privileges to run
 
 Arachne is granted access to raw sockets without the need to run with sudo or
-as root user, by being granted`CAP_NET_RAW` capability
+as root user, by being granted `CAP_NET_RAW` capability
 (see: [capabilities][]).
 
 
-## License
-
-Copyright (c) 2016 Uber Technologies, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+<hr>
+Released under the [MIT License](LICENSE).
 
 [doc-img]: https://godoc.org/github.com/uber/arachne?status.svg
 [doc]: https://godoc.org/github.com/uber/arachne

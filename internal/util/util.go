@@ -22,7 +22,6 @@ package util
 
 import (
 	"bufio"
-	"errors"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -31,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"fmt"
 	"github.com/fatih/color"
 	"github.com/uber-go/zap"
 	"github.com/uber/arachne/metrics"
@@ -49,8 +49,8 @@ ____________________________________________________________/\\\________________
 
 `
 
-// KillChannel includes all channels to tell goroutines to terminate
-type KillChannel struct {
+// KillChannels includes all channels to tell goroutines to terminate
+type KillChannels struct {
 	Receiver   chan struct{}
 	Echo       chan struct{}
 	Collector  chan struct{}
@@ -137,7 +137,7 @@ func CheckPID(fname string, logger zap.Logger) error {
 		logger.Error("Arachne already running and different from self PID",
 			zap.Int("other_PID", readPID),
 			zap.Int("self_PID", os.Getpid()))
-		return errors.New("Arachne already running and different from self PID")
+		return fmt.Errorf("Arachne already running and different from self PID")
 	}
 	return savePID(fname, os.Getpid(), logger)
 }
@@ -167,7 +167,7 @@ func RemovePID(fname string, logger zap.Logger) {
 }
 
 // CleanUpRefresh removes state of past refresh.
-func CleanUpRefresh(killC *KillChannel, receiverOnlyMode bool, senderOnlyMode bool) {
+func CleanUpRefresh(killC *KillChannels, receiverOnlyMode bool, senderOnlyMode bool) {
 	// Close all the channels
 	if !receiverOnlyMode {
 		close(killC.Echo)
@@ -185,7 +185,7 @@ func CleanUpRefresh(killC *KillChannel, receiverOnlyMode bool, senderOnlyMode bo
 
 // CleanUpAll conducts a clean exit.
 func CleanUpAll(
-	killC *KillChannel,
+	killC *KillChannels,
 	receiverOnlyMode bool,
 	senderOnlyMode bool,
 	PIDPath string,

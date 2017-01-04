@@ -22,7 +22,7 @@ case "$1" in
 
     echo "Preparing folder paths"
 	mkdir -p /var/arachne /var/log/arachne /var/run/arachne
-	chmod -R 777 /var/arachne /var/log/arachne /var/run/arachne
+	chmod -R 0775 /var/arachne /var/log/arachne /var/run/arachne
 	rm -f /var/run/arachne/arachne.pid
 
     echo "Disabling offloading to NIC chip"

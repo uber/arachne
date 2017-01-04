@@ -26,6 +26,7 @@ test: check-license lint
 	find . -type f -name '*.go' | xargs golint
 	go test $(PACKAGES)
 
+.PHONY: vendor
 vendor: glide.lock
 	glide install
 
@@ -33,7 +34,6 @@ vendor: glide.lock
 install_ci:
 	glide --version || go get -u -f github.com/Masterminds/glide
 	make vendor
-	glide install
 	go get -u -f github.com/golang/lint/golint
 
 vendor/github.com/uber/uber-licence: vendor

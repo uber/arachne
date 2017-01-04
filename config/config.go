@@ -22,7 +22,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -47,8 +46,8 @@ import (
 )
 
 const (
-	environmentKey = "UBER_ENVIRONMENT"
-	configDirKey   = "UBER_CONFIG_DIR"
+	environmentKey = "ENVIRONMENT"
+	configDirKey   = "CONFIG_DIR"
 )
 
 const (
@@ -426,7 +425,7 @@ func refreshRemoteList(
 		case <-kill:
 			confRetry.Stop()
 			logger.Debug("Requested to exit while trying to fetch configuration file.")
-			return errors.New("received SIG")
+			return fmt.Errorf("received SIG")
 		}
 	}
 
@@ -472,7 +471,7 @@ func fetchRemoteListFromOrchestrator(
 		logger.Warn("HTTP response from Orchestrator: Error opening requested configuration file")
 	default:
 		logger.Error("unhandled HTTP response from Orchestrator")
-		err = errors.New("unhandled HTTP response from Orchestrator")
+		err = fmt.Errorf("unhandled HTTP response from Orchestrator")
 	}
 
 	return resp.StatusCode, bResp, err
@@ -532,7 +531,7 @@ func readRemoteList(
 		srcIP, err = network.GetSourceAddr("ip6", strings.ToLower(c.Local.SrcAddress),
 			glRC.HostName, glRC.InterfaceName, logger)
 		if err != nil {
-			return errors.New("could not retrieve an IPv4 or IPv6 source address")
+			return fmt.Errorf("could not retrieve an IPv4 or IPv6 source address")
 		}
 	}
 	glRC.SrcAddress = *srcIP
@@ -540,7 +539,7 @@ func readRemoteList(
 
 	glRC.TargetTCPPort = c.Local.TargetTCPPort
 	if glRC.Timeout, err = time.ParseDuration(c.Local.Timeout); err != nil {
-		return errors.New("failed to parse the timeout")
+		return fmt.Errorf("failed to parse the timeout")
 	}
 	glRC.SrcTCPPortRange[0] = c.Local.BaseSrcTCPPort
 	if c.Local.NumSrcTCPPorts > maxNumSrcTCPPorts {
@@ -555,18 +554,18 @@ func readRemoteList(
 			"source ports [%d-%d]", glRC.SrcTCPPortRange[0], glRC.SrcTCPPortRange[1])
 	}
 	if glRC.BatchInterval, err = time.ParseDuration(c.Local.BatchInterval); err != nil {
-		return errors.New("failed to parse the batch interval")
+		return fmt.Errorf("failed to parse the batch interval")
 	}
 	if glRC.BatchInterval < minBatchInterval {
 		return fmt.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
 	}
 	if glRC.PollOrchestratorInterval.Success, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalSuccess); err != nil {
-		return errors.New("failed to parse the Orchestrator poll interval for success")
+		return fmt.Errorf("failed to parse the Orchestrator poll interval for success")
 	}
 	if glRC.PollOrchestratorInterval.Failure, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalFailure); err != nil {
-		return errors.New("failed to parse the Orchestrator poll interval for failure")
+		return fmt.Errorf("failed to parse the Orchestrator poll interval for failure")
 	}
 
 	glRC.QoSEnabled = isTrue(c.Local.QoSEnabled)

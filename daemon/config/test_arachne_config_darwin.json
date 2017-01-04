@@ -11,14 +11,14 @@
     "batch_interval": "10s",
     "qos": "disabled",
     "resolve_dns": "enabled",
-    "dns_servers_alternate": "10.249.0.3, 10.249.0.4, 8.8.8.8, 8.8.4.4",
+    "dns_servers_alternate": "8.8.8.8, 8.8.4.4",
     "poll_orchestrator_interval_success": "2h55m",
     "poll_orchestrator_interval_failure": "60s"
   },
 
   "internal": [
-    {"ip": "10.30.39.31"},
-    {"ip": "10.160.15.27"},
-    {"ip": "10.30.6.31", "host_name": "techops01-sjc1"}
+    {"ip": "10.10.39.31"},
+    {"ip": "10.10.15.27"},
+    {"ip": "10.10.6.31", "host_name": "my-host-us"}
   ]
 }

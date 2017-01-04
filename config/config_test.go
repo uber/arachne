@@ -76,7 +76,7 @@ func TestReadConfig(t *testing.T) {
 	assert.False(gl.RemoteConfig.QoSEnabled, "error parsing QoS from YAML test configuration file")
 	assert.True(gl.RemoteConfig.ResolveDNS, "error parsing resolve_dns from YAML test configuration file")
 
-	if val, ok := remotes["10.30.6.31"]; !ok || val.Hostname != "techops01-sjc1" {
+	if val, ok := remotes["10.10.6.31"]; !ok || val.Hostname != "my-host-us" {
 		t.Errorf("Remotes are %+v in %s", remotes, testConfigFilePath)
 		t.Error("failed to parse a remote target")
 	}
