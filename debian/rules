@@ -35,9 +35,9 @@ DESTLOGDIR = /var/$(BINNAME)
 
 install/arachne::
 	mkdir -p $(DESTCFGDIR)
-	chmod -R 777 $(DESTCFGDIR)
+	chmod -R 0775 $(DESTCFGDIR)
 	cp ./config/* $(DESTCFGDIR)
 	mkdir -p $(DESTLOGDIR)
-	chmod -R 777 $(DESTLOGDIR)
+	chmod -R 0775 $(DESTLOGDIR)
 	setcap cap_net_raw+ep $(DESTBINDIR)/$(BINNAME)
 	cp debian/tmp/* debian/$(BINNAME)/

@@ -5,11 +5,11 @@ arachne:
     restVersion: api/v1
 
 logging:
-  stdout: false
+  stdout: true
   level: info
   logSink: /var/log/arachne/arachne.log
 
 metrics:
   statsd:
-    hostPort: 127.0.0.1:4744
+    hostPort: 127.0.0.1:6789
     prefix: arachne

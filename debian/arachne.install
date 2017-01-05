@@ -1,2 +1,2 @@
-daemon/arachne /usr/bin
-daemon/config/* /etc/arachne/
+arachned/arachne /usr/bin
+arachned/config/* /etc/arachne/

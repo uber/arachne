@@ -50,12 +50,13 @@ ____________________________________________________________/\\\________________
 
 Usage: arachne [--foreground] [-c=<config_file_path>] [--receiver_only] [--sender_only] [--orchestrator]
 
-Utility to echo the Uber DC and Cloud Infrastructure
+Arachne is a packet loss detection system and an underperforming path detection
+system for Data Center and Cloud Infrastructures.
 
 Options:
   -v, --version                                     Show the version and exit
   --foreground=false                                Force foreground mode
-  -c, --config="/etc/arachne/arachne_config.json"   Configuration file path
+  -c, --config="/etc/arachne/target_config.json"   Configuration file path
   (by default in /etc/arachne/)
   --receiver_only=false                             Force TCP receiver-only mode
   --sender_only=false                               Force TCP sender-only mode

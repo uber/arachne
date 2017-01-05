@@ -90,7 +90,7 @@ func ResolveAddr(target string, servers []net.IP, logger zap.Logger) (string, er
 	if len(names) == 0 {
 		return resolveAddrWServer(target, servers, logger)
 	}
-	return strings.Replace(names[0], ".prod.uber.internal.", "", -1), nil
+	return names[0], nil
 }
 
 func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (string, error) {
@@ -123,7 +123,7 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 		resolved := strings.Split(r.Answer[0].String(), "\t")
 
 		// return fourth tab-delimited field of DNS query response
-		return strings.Replace(resolved[4], ".prod.uber.internal.", "", -1), nil
+		return resolved[4], nil
 	}
 	logger.Warn("failed to DNS resolve target with alternate servers",
 		zap.String("target", target))

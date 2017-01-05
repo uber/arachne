@@ -37,6 +37,7 @@ import (
 	"github.com/jawher/mow.cli"
 	"github.com/spf13/viper"
 	"github.com/uber-go/zap"
+	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
@@ -46,19 +47,9 @@ import (
 )
 
 const (
-	environmentKey = "ENVIRONMENT"
-	configDirKey   = "CONFIG_DIR"
-)
-
-const (
-	configDir = "config"
-)
-
-// Possible environments.
-const (
-	EnvProduction  = "production"
-	EnvDevelopment = "development"
-	EnvTest        = "test"
+	configDirKey  = "ARACHNE_CONFIG_DIR"
+	configDir     = "/etc/arachne"
+	defTargetFile = "target_config.json"
 )
 
 // ArachneConfiguration contains specific configuration to Arachne.
@@ -180,11 +171,11 @@ func getConfigDir() string {
 	return realConfigDir
 }
 
-func localFileReadable(path string) bool {
+func localFileReadable(path string) error {
 	if _, err := ioutil.ReadFile(path); err != nil {
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
 // ParseCliArgs provides the usage and help menu, and parses the actual arguments.
@@ -196,12 +187,9 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 	app.Version("v version", "Arachne "+version)
 	app.Spec = "[--foreground] [-c=<config_file_path>] [--receiver_only] [--sender_only] [--orchestrator]"
 
+	defTargetLocalPath := path.Join(getConfigDir(), defTargetFile)
+
 	args.Foreground = app.BoolOpt("foreground", false, "Force foreground mode")
-	defTargetLocalPath := "/etc/arachne/arachne_config.json"
-	if configRoot := os.Getenv(configDirKey); configRoot != "" &&
-		localFileReadable(path.Join(configRoot, "arachne_config.json")) {
-		defTargetLocalPath = path.Join(configRoot, "arachne_config.json")
-	}
 	args.TargetsLocalPath = app.StringOpt("c config", defTargetLocalPath,
 		fmt.Sprintf("Local target list file path (by default: %s)", defTargetLocalPath))
 	args.ReceiverOnlyMode = app.BoolOpt("receiver_only", false, "Force TCP receiver-only mode")
@@ -216,22 +204,13 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 	return args
 }
 
-// getEnvironment returns the environment
-func getEnvironment() string {
-	env := os.Getenv(environmentKey)
-	if env == "" {
-		env = EnvDevelopment
-	}
-	return env
-}
-
 // Get fetches the configuration file from local path.
 func Get(ec *Extended, logger zap.Logger) (*AppConfig, error) {
 
-	viper.SetConfigName(getEnvironment())
-	viper.AddConfigPath(getConfigDir())
+	fname := path.Join(getConfigDir(), fmt.Sprintf("%s.yaml", defines.ArachneService))
 
-	fname := path.Join(getConfigDir(), fmt.Sprintf("%s.yaml", getEnvironment()))
+	viper.SetConfigName(defines.ArachneService)
+	viper.AddConfigPath(getConfigDir())
 
 	if err := viper.ReadInConfig(); err != nil {
 		logger.Error("error initializing configuration", zap.Error(err))
@@ -272,7 +251,9 @@ func unmarshalBasicConfig(data []byte, fname string, logger zap.Logger) (*BasicC
 
 	cfg := new(BasicConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		logger.Error("error unmarshaling the configuration file", zap.String("file", fname), zap.Error(err))
+		logger.Error("error unmarshaling the configuration file",
+			zap.String("file", fname),
+			zap.Error(err))
 		return nil, err
 	}
 	// Validate on the merged config at the end
@@ -303,8 +284,10 @@ func FetchRemoteList(
 	// Standalone (non-Orchestrator) mode
 	if !*(gl.CLI.OrchestratorMode) {
 		logger.Debug("Orchestrator mode disabled")
-		if !localFileReadable(*gl.CLI.TargetsLocalPath) {
-			logger.Fatal("unable to retrieve local configuration file")
+		if err := localFileReadable(*gl.CLI.TargetsLocalPath); err != nil {
+			logger.Fatal("unable to retrieve local configuration file",
+				zap.String("file", *gl.CLI.TargetsLocalPath),
+				zap.Error(err))
 		}
 		logger.Info("Configuration file", zap.String("file", *gl.CLI.TargetsLocalPath))
 
@@ -358,14 +341,13 @@ func createHTTPClient(timeout time.Duration, disableKeepAlives bool) *http.Clien
 }
 
 // GetHostname returns the hostname
-func GetHostname(logger zap.Logger) string {
+func GetHostname(logger zap.Logger) (string, error) {
 	host, err := os.Hostname()
 	if err != nil {
-		logger.Warn("Failed to extract hostname from OS. "+
-			"Unable to request configuration file from Orchestrator", zap.Error(err))
-		return "unknown"
+		logger.Warn("Failed to extract hostname from OS", zap.Error(err))
+		return "unknown", err
 	}
-	return host
+	return host, nil
 }
 
 // refreshRemoteList checks with Arachne Orchestrator if new a config file should be fetched
@@ -386,11 +368,12 @@ func refreshRemoteList(
 	for {
 		var err error
 
+		hostname, _ := GetHostname(logger)
 		RESTReq := fmt.Sprintf("http://%s/%s/%s?hostname=%s",
 			gl.App.Orchestrator.AddrPort,
 			gl.App.Orchestrator.RESTVersion,
 			orchestratorRESTConf,
-			GetHostname(logger))
+			hostname)
 		logger.Debug("Sending HTTP request to Orchestrator", zap.String("request", RESTReq))
 		respCode, raw, err := fetchRemoteListFromOrchestrator(client, RESTReq, logger)
 		if err == nil {
@@ -405,7 +388,8 @@ func refreshRemoteList(
 					goto cont
 				}
 				logger.Info("Will poll Orchestrator again later",
-					zap.String("retry_time", gl.RemoteConfig.PollOrchestratorInterval.Success.String()))
+					zap.String("retry_time",
+						gl.RemoteConfig.PollOrchestratorInterval.Success.String()))
 				return nil
 
 			case http.StatusNotFound:
@@ -504,17 +488,8 @@ func readRemoteList(
 	if glRC.Region == "" {
 		logger.Warn("Region name not provided in config file")
 	}
-	if c.Local.HostName != "" {
-		glRC.HostName = strings.ToLower(c.Local.HostName)
-	} else {
-		if osHostname, err := os.Hostname(); err != nil {
-			logger.Warn("Failed to extract hostname from OS")
-			glRC.HostName = ""
-		} else {
-			glRC.HostName = strings.Replace(strings.ToLower(osHostname),
-				".prod.uber.internal.", "", -1)
-		}
-	}
+
+	glRC.HostName, _ = GetHostname(logger)
 
 	glRC.InterfaceName = strings.ToLower(c.Local.InterfaceName)
 	switch {

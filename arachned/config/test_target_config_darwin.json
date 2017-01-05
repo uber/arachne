@@ -1,9 +1,8 @@
 {
   "local": {
     "region": "sjc1",
-    "host_name": "",
     "src_address": "",
-    "interface_name": "eth0",
+    "interface_name": "en0",
     "target_tcp_port": 44111,
     "timeout": "500ms",
     "base_src_tcp_port": 31000,

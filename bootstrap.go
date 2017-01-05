@@ -52,7 +52,8 @@ func Run(ec *config.Extended, opts ...Option) {
 		os.Exit(1)
 	}
 
-	logger, err := log.CreateLogger(&gl.App.Logging, d.ArachneService, config.GetHostname(bootstrapLogger),
+	osHostname, _ := config.GetHostname(bootstrapLogger)
+	logger, err := log.CreateLogger(&gl.App.Logging, d.ArachneService, osHostname,
 		gl.App.PIDPath, util.RemovePID, *(gl.CLI.Foreground), bootstrapLogger)
 	if err != nil {
 		bootstrapLogger.Fatal("unable to initialize Arachne Logger", zap.Error(err))
@@ -86,7 +87,8 @@ func Run(ec *config.Extended, opts ...Option) {
 		// Channels to tell goroutines to terminate
 		killC := new(util.KillChannels)
 
-		// If Master mode enabled, fetch JSON configuration file, otherwise try to retrieve default local file
+		// If Orchestrator mode enabled, fetch JSON configuration file, otherwise try
+		// to retrieve default local file
 		err = config.FetchRemoteList(&gl, d.MaxNumRemoteTargets, d.MaxNumSrcTCPPorts,
 			d.MinBatchInterval, d.HTTPResponseHeaderTimeout, d.OrchestratorRESTConf, sigC, logger)
 		if err != nil {

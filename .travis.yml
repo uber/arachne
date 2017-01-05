@@ -5,8 +5,7 @@ go:
   - tip
 env:
   global:
-    - ENVIRONMENT=production
-    - CONFIG_DIR=./daemon/config
+    - CONFIG_DIR=./arachned/config
 install: make install_ci
 script: make test
 cache:

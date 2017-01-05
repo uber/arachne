@@ -29,8 +29,8 @@ import (
 const (
 	ArachneService                  = "arachne"
 	ArachneVersion                  = "0.2.0" //TODO Read from file version.git
-	ArachneTestConfigFilePathLinux  = "../daemon/config/test_arachne_config_linux.json"
-	ArachneTestConfigFilePathDarwin = "../daemon/config/test_arachne_config_darwin.json"
+	ArachneTestConfigFilePathLinux  = "../arachned/config/test_target_config_linux.json"
+	ArachneTestConfigFilePathDarwin = "../arachned/config/test_target_config_darwin.json"
 	BatchIntervalEchoingPerc        = 0.75
 	BatchIntervalUploadStats        = 0.95
 	ChannelInBufferSize             = 800

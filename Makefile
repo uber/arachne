@@ -9,7 +9,7 @@ ${builddir}:
 
 .PHONY: bins
 bins:
-	go build -o ${builddir}/arachne-daemon github.com/uber/arachne/daemon/
+	go build -o ${builddir}/arachned github.com/uber/arachne/arachned/
 
 all: bins
 
