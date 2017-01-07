@@ -1,0 +1,20 @@
+Arachne for Debian
+------------------
+
+Arachne is Uber's framework of in-house developed, strategically distributed, light-weight server agents that,
+in an always-on and active fashion, perform end-to-end functional testing of all the network connected
+infrastructure components and, on top of that, monitor the health of the DC and Cloud infrastructure and
+can discern between an infrastructure issue and an application issue.
+Arachne is a packet loss detection system and an underperforming path detection system that is able to detect
+the following intra-DC, inter-DC, DC-to-Cloud, and DC-to-External-Services issues by generating minimal
+traffic that is the ‘closest’ to the typical type of traffic an Uber application generates:
+- Reachability
+- Round-trip and 1-way (Avg, Best, Worst, StDev) Latency
+- Silent packet drops and black holes
+- Jitter (average of the deviation from the network mean latency)
+- PMTU or Firewall issues too related possibly to network config changes (accidental or not)
+- Whether network-level SLAs are met
+
+Arachne runs on Linux and Darwin (Mac OS X).
+
+ -- Vasileios Lakafosis <lakafosi@uber.com>  Fri, 23 Dec 2016 21:37:13 +0000

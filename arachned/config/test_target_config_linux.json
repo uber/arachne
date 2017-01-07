@@ -1,0 +1,22 @@
+{
+  "local": {
+    "region": "us-west",
+    "src_address": "",
+    "interface_name": "eth0",
+    "target_tcp_port": 44111,
+    "timeout": "500ms",
+    "base_src_tcp_port": 31000,
+    "num_src_tcp_ports": 16,
+    "batch_interval": "10s",
+    "qos": "disabled",
+    "resolve_dns": "enabled",
+    "dns_servers_alternate": "8.8.8.8, 8.8.4.4",
+    "poll_orchestrator_interval_success": "2h55m",
+    "poll_orchestrator_interval_failure": "60s"
+  },
+
+  "internal": [
+    {"ip": "10.10.39.31"},
+    {"ip": "10.10.15.27"}
+  ]
+}
