@@ -19,7 +19,7 @@ DC-to-External-Services issues by generating minimal traffic:
 
 There are two ways to use the Arachne package.
 
-## As a standalone program
+### As a standalone program
 Run Arachne as a standalone program (it's Debian packaged already too).
 
 ### As a library in your own program
@@ -27,7 +27,7 @@ Import this package and call Arachne from your program/service with
 ```go
     arachne.Run(config, arachne.ReceiverOnlyMode(false))
 ```
-where the option provided above is among the few optional ones,
+where the option provided above is among the few optional ones.
 
 
 Below is the list of all the CLI options available, when Arachne is 
@@ -51,7 +51,7 @@ ____________________________________________________________/\\\________________
 Usage: arachne [--foreground] [-c=<config_file_path>] [--receiver_only] [--sender_only] [--orchestrator]
 
 Arachne is a packet loss detection system and an underperforming path detection
-system for Data Center and Cloud Infrastructures.
+system for Data Center and Cloud infrastructures.
 
 Options:
   -v, --version                                     Show the version and exit
