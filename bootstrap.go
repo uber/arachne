@@ -108,7 +108,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			dnsRefresh := time.NewTicker(d.DNSRefreshInterval)
 			dnsWg.Add(1)
 			killC.DNSRefresh = make(chan struct{})
-			config.ResolveDNSTargets(gl.Remotes, gl.RemoteConfig, dnsRefresh, &dnsWg,
+			config.ResolveDnsTargets(gl.Remotes, gl.RemoteConfig, dnsRefresh, &dnsWg,
 				killC.DNSRefresh, logger)
 			dnsWg.Wait()
 			logger.Debug("Remotes after DNS resolution include",

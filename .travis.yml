@@ -5,7 +5,7 @@ go:
   - tip
 env:
   global:
-    - CONFIG_DIR=./arachned/config
+    - ARACHNE_CONFIG_DIR=./arachned/config
 install: make install_ci
 script: make test
 cache:

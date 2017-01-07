@@ -65,11 +65,11 @@ func GetSourceAddr(
 
 // Resolve given domain hostname/address in the given address family
 //TODO replace with net.LookupHost?
-func resolveHost(af string, target string, logger zap.Logger) (*net.IP, error) {
-	addr, err := net.ResolveIPAddr(af, target)
+func resolveHost(af string, hostname string, logger zap.Logger) (*net.IP, error) {
+	addr, err := net.ResolveIPAddr(af, hostname)
 	if err != nil {
-		logger.Warn("failed net.ResolveIPAddr for target",
-			zap.String("target", target),
+		logger.Warn("failed to DNS resolve hostname with default server",
+			zap.String("hostname", hostname),
 			zap.Error(err))
 		return nil, err
 	}
@@ -77,23 +77,23 @@ func resolveHost(af string, target string, logger zap.Logger) (*net.IP, error) {
 	return &addr.IP, nil
 }
 
-// ResolveAddr returns DNS name of given IP address. Returns the same input string, if resolution fails.
-func ResolveAddr(target string, servers []net.IP, logger zap.Logger) (string, error) {
+// ResolveIP returns DNS name of given IP address. Returns the same input string, if resolution fails.
+func ResolveIP(ip string, servers []net.IP, logger zap.Logger) (string, error) {
 
-	names, err := net.LookupAddr(target)
+	names, err := net.LookupAddr(ip)
 	if err != nil {
-		logger.Warn("failed to DNS resolve target with default server",
-			zap.String("target", target),
+		logger.Warn("failed to DNS resolve IP with default server",
+			zap.String("ip", ip),
 			zap.Error(err))
-		return resolveAddrWServer(target, servers, logger)
+		return resolveIPwServer(ip, servers, logger)
 	}
 	if len(names) == 0 {
-		return resolveAddrWServer(target, servers, logger)
+		return resolveIPwServer(ip, servers, logger)
 	}
 	return names[0], nil
 }
 
-func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (string, error) {
+func resolveIPwServer(ip string, servers []net.IP, logger zap.Logger) (string, error) {
 
 	if servers == nil {
 		return "", fmt.Errorf("no alternate DNS servers configured")
@@ -102,7 +102,7 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 	c := dns.Client{}
 	m := dns.Msg{}
 
-	fqdn, err := dns.ReverseAddr(target)
+	fqdn, err := dns.ReverseAddr(ip)
 	if err != nil {
 		return "", err
 	}
@@ -116,8 +116,8 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 			err = fmt.Errorf("reverse DNS resolution with own server returned no results")
 			continue
 		}
-		logger.Debug("Reverse DNS resolution for target with user-configured DNS server took",
-			zap.String("target", target),
+		logger.Debug("Reverse DNS resolution for ip with user-configured DNS server took",
+			zap.String("ip", ip),
 			zap.Float64("duration", t.Seconds()))
 
 		resolved := strings.Split(r.Answer[0].String(), "\t")
@@ -125,9 +125,9 @@ func resolveAddrWServer(target string, servers []net.IP, logger zap.Logger) (str
 		// return fourth tab-delimited field of DNS query response
 		return resolved[4], nil
 	}
-	logger.Warn("failed to DNS resolve target with alternate servers",
-		zap.String("target", target))
-	return "", fmt.Errorf("failed to DNS resolve %s with alternate servers", target)
+
+	logger.Warn("failed to DNS resolve IP with alternate servers", zap.String("ip", ip))
+	return "", fmt.Errorf("failed to DNS resolve %s with alternate servers", ip)
 }
 
 func interfaceAddress(af string, name string) (*net.IP, error) {

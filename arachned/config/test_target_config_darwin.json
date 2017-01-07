@@ -1,6 +1,6 @@
 {
   "local": {
-    "region": "sjc1",
+    "region": "us-west",
     "src_address": "",
     "interface_name": "en0",
     "target_tcp_port": 44111,

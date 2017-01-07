@@ -569,13 +569,13 @@ func readRemoteList(
 }
 
 // Validate and create map of ipv4 and ipv6 addresses with string as their key
-func walkTargets(jc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger zap.Logger) {
+func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger zap.Logger) {
 
 	for _, t := range ts {
-		if t.IP == "" && jc.ResolveDNS && t.HostName != "" {
+		if grc.ResolveDNS && t.HostName != "" {
 			addrs, err := net.LookupHost(t.HostName)
 			if err != nil {
-				logger.Error("failed to resolve target", zap.Error(err))
+				logger.Error("failed to DNS resolve hostname", zap.Error(err))
 				continue
 			}
 			t.IP = addrs[0]
@@ -588,9 +588,9 @@ func walkTargets(jc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, l
 				zap.String("err", "invalid IP address for host %s"),
 				zap.String("hostname", t.HostName))
 		}
-		if currIP.Equal(jc.SrcAddress) {
+		if currIP.Equal(grc.SrcAddress) {
 			logger.Debug("Local server's address not added in remote target list",
-				zap.String("JSON_source_address", jc.SrcAddress.String()),
+				zap.String("JSON_source_address", grc.SrcAddress.String()),
 				zap.String("target", currIP.String()))
 			continue
 		}
@@ -598,24 +598,25 @@ func walkTargets(jc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, l
 	}
 }
 
-// ResolveDNSTargets resolves the DNS names of the IP addresses of all echo targets and the localhost.
-func ResolveDNSTargets(
+// ResolveDnsTargets resolves the DNS names of the IP addresses of all echo targets and the localhost.
+func ResolveDnsTargets(
 	remotes RemoteStore,
-	global *RemoteConfig,
+	grc *RemoteConfig,
 	DNSRefresh *time.Ticker,
 	wg *sync.WaitGroup,
 	kill chan struct{},
 	logger zap.Logger,
 ) {
 	go func() {
-		if localHost, err := network.ResolveAddr(global.SrcAddress.String(),
-			global.DNSServersAlt, logger); err == nil {
-			if global.HostName == "" {
-				global.HostName = localHost
-			} else if global.HostName != strings.ToLower(localHost) {
+		// Resolve
+		if localHost, err := network.ResolveIP(grc.SrcAddress.String(),
+			grc.DNSServersAlt, logger); err == nil {
+			if grc.HostName == "" {
+				grc.HostName = localHost
+			} else if grc.HostName != strings.ToLower(localHost) {
 				logger.Warn("DNS-resolved local hostname is different from configured local hostname",
 					zap.String("DNS-resolved_hostname", localHost),
-					zap.String("configured_hostname", global.HostName))
+					zap.String("configured_hostname", grc.HostName))
 			}
 		}
 
@@ -624,9 +625,9 @@ func ResolveDNSTargets(
 				hostname := remotes[addressKey].Hostname
 				// Do not update hostname for external targets
 				if !remotes[addressKey].External {
-					hostname = addressKey
-					if global.ResolveDNS {
-						if h, err := network.ResolveAddr(addressKey, global.DNSServersAlt,
+					//hostname = addressKey
+					if grc.ResolveDNS {
+						if h, err := network.ResolveIP(addressKey, grc.DNSServersAlt,
 							logger); err == nil {
 							hostname = h
 							logger.Debug("DNS resolution",
@@ -648,7 +649,7 @@ func ResolveDNSTargets(
 				continue
 			case <-kill:
 				DNSRefresh.Stop()
-				logger.Debug("ResolveDNSTargets goroutine returning")
+				logger.Debug("ResolveDnsTargets goroutine returning")
 				return
 			}
 		}
