@@ -47,7 +47,7 @@ func Run(ec *config.Extended, opts ...Option) {
 
 	gl.CLI = config.ParseCliArgs(bootstrapLogger, d.ArachneService, d.ArachneVersion)
 	apply(&gl, opts...)
-	gl.App, err = config.Get(ec, bootstrapLogger)
+	gl.App, err = config.Get(*gl.CLI.ConfigFile, ec, bootstrapLogger)
 	if err != nil {
 		os.Exit(1)
 	}
