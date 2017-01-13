@@ -48,7 +48,7 @@ ____________________________________________________________/\\\________________
         __\////////\//__\///___________\////////\//_____\////////__\///____\///__\///____\///____\//////////__
 
 
-Usage: arachne [--foreground] [-c=<config_file_path>] [--receiver_only] [--sender_only] [--orchestrator]
+Usage: arachne [--foreground] [-c=<config_file>] [--receiver_only] [--sender_only]
 
 Arachne is a packet loss detection system and an underperforming path detection
 system for Data Center and Cloud infrastructures.
@@ -56,11 +56,10 @@ system for Data Center and Cloud infrastructures.
 Options:
   -v, --version                                     Show the version and exit
   --foreground=false                                Force foreground mode
-  -c, --config="/etc/arachne/target_config.json"   Configuration file path
-  (by default in /etc/arachne/)
+  -c, --config_file="/etc/arachne/arachne.yaml"     Configuration file path
+  (default: /etc/arachne/arachne.yaml)
   --receiver_only=false                             Force TCP receiver-only mode
   --sender_only=false                               Force TCP sender-only mode
-  --orchestrator=false                              Force orchestrator mode
 ```
 
 
