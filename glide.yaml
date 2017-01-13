@@ -4,11 +4,9 @@ import:
   subpackages:
   - statsd
 - package: github.com/fatih/color
-- package: github.com/fsnotify/fsnotify
 - package: github.com/jawher/mow.cli
 - package: github.com/miekg/dns
 - package: github.com/spacemonkeygo/monotime
-- package: github.com/spf13/viper
 - package: github.com/uber/uber-licence
 - package: github.com/uber-go/zap
 - package: gopkg.in/validator.v2
