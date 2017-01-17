@@ -34,7 +34,6 @@ import (
 
 	"github.com/jawher/mow.cli"
 	"github.com/uber-go/zap"
-	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
