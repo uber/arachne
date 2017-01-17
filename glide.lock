@@ -1,5 +1,5 @@
-hash: 6a4e1edc689f9c8d154c4d5b712167d8f7fb72e4d407c4239cf1dd42ee910723
-updated: 2017-01-13T11:18:41.94565886-08:00
+hash: a1180028c5a98d168b77277c2aabe2d244b53a2d619e07f7bfeaa63fb13349a3
+updated: 2017-01-17T11:47:45.116235366-08:00
 imports:
 - name: github.com/DataDog/datadog-go
   version: 909c02b65dd8a52e8fa6072db9752a112227cf21
@@ -22,7 +22,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber-go/zap
-  version: 8ec65dd53fd33dce854f899316fdb75c7c695fc0
+  version: a5783ee4b216a927da8f839c45cfbf9d694e1467
 - name: github.com/uber/uber-licence
   version: e35b7f99af2d110505bc81d8a9449dafaa326730
 - name: golang.org/x/sys
