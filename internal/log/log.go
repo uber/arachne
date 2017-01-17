@@ -75,7 +75,7 @@ func CreateLogger(
 		}
 		bootstrapLogger.Info("Log file path provided", zap.String("path", c.LogSink))
 		if c.StdOut || foreground {
-			output = zap.Output(zap.Tee(os.Stdout, sink))
+			output = zap.Output(zap.MultiWriteSyncer(os.Stdout, sink))
 		} else {
 			output = zap.Output(sink)
 		}

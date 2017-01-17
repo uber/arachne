@@ -27,17 +27,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/jawher/mow.cli"
-	"github.com/spf13/viper"
 	"github.com/uber-go/zap"
-	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
@@ -46,20 +42,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	configDirKey  = "ARACHNE_CONFIG_DIR"
-	configDir     = "/etc/arachne"
-	defTargetFile = "target_config.json"
-)
+const defaultConfigFile = "/etc/arachne/arachne.yaml"
 
 // ArachneConfiguration contains specific configuration to Arachne.
 type ArachneConfiguration struct {
-	PIDPath      string             `yaml:"pidPath"`
-	Orchestrator OrchestratorConfig `yaml:"orchestrator"`
+	PIDPath                string             `yaml:"pidPath"`
+	Orchestrator           OrchestratorConfig `yaml:"orchestrator"`
+	StandaloneTargetConfig string             `yaml:"standaloneTargetConfig"`
 }
 
 // OrchestratorConfig contains configuration for the Arachne Orchestrator.
 type OrchestratorConfig struct {
+	Enabled     bool   `yaml:"enabled"`
 	AddrPort    string `yaml:"addrport"`
 	RESTVersion string `yaml:"restVersion"`
 }
@@ -116,20 +110,20 @@ type RemoteFileConfig struct {
 
 // AppConfig holds the info parsed from the local YAML config file.
 type AppConfig struct {
-	Logging      log.Config
-	Verbose      bool
-	PIDPath      string
-	Orchestrator OrchestratorConfig
-	Metrics      metrics.Config
+	Logging                log.Config
+	Verbose                bool
+	PIDPath                string
+	Orchestrator           OrchestratorConfig
+	StandaloneTargetConfig string
+	Metrics                metrics.Config
 }
 
 // CLIConfig holds the info parsed from CLI.
 type CLIConfig struct {
+	ConfigFile       *string
 	Foreground       *bool
-	TargetsLocalPath *string
 	ReceiverOnlyMode *bool
 	SenderOnlyMode   *bool
-	OrchestratorMode *bool
 }
 
 // RemoteConfig holds the info parsed from the JSON config file.
@@ -162,15 +156,6 @@ type Global struct {
 	Remotes      RemoteStore
 }
 
-func getConfigDir() string {
-	realConfigDir := configDir
-	if configRoot := os.Getenv(configDirKey); configRoot != "" {
-		realConfigDir = configRoot
-	}
-
-	return realConfigDir
-}
-
 func localFileReadable(path string) error {
 	if _, err := ioutil.ReadFile(path); err != nil {
 		return err
@@ -185,16 +170,13 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 	app := cli.App(service, "Utility to echo the DC and Cloud Infrastructure")
 
 	app.Version("v version", "Arachne "+version)
-	app.Spec = "[--foreground] [-c=<config_file_path>] [--receiver_only] [--sender_only] [--orchestrator]"
-
-	defTargetLocalPath := path.Join(getConfigDir(), defTargetFile)
+	app.Spec = "[--foreground] [-c=<config_file>] [--receiver_only] [--sender_only]"
 
 	args.Foreground = app.BoolOpt("foreground", false, "Force foreground mode")
-	args.TargetsLocalPath = app.StringOpt("c config", defTargetLocalPath,
-		fmt.Sprintf("Local target list file path (by default: %s)", defTargetLocalPath))
+	args.ConfigFile = app.StringOpt("c config_file", defaultConfigFile,
+		fmt.Sprintf("Agent's primary yaml configuration file (by default: %s)", defaultConfigFile))
 	args.ReceiverOnlyMode = app.BoolOpt("receiver_only", false, "Force TCP receiver-only mode")
 	args.SenderOnlyMode = app.BoolOpt("sender_only", false, "Force TCP sender-only mode")
-	args.OrchestratorMode = app.BoolOpt("orchestrator", false, "Force orchestrator mode")
 
 	app.Action = func() {
 		logger.Debug("Command line arguments parsed")
@@ -205,42 +187,27 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 }
 
 // Get fetches the configuration file from local path.
-func Get(ec *Extended, logger zap.Logger) (*AppConfig, error) {
+func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 
-	fname := path.Join(getConfigDir(), fmt.Sprintf("%s.yaml", defines.ArachneService))
-
-	viper.SetConfigName(defines.ArachneService)
-	viper.AddConfigPath(getConfigDir())
-
-	if err := viper.ReadInConfig(); err != nil {
-		logger.Error("error initializing configuration", zap.Error(err))
-		return nil, err
-	}
-
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		// TODO Add action on change
-		logger.Warn("Config file changed", zap.String("name", e.Name), zap.String("path", fname))
-	})
-
-	data, err := ioutil.ReadFile(fname)
+	data, err := ioutil.ReadFile(cf)
 	if err != nil {
-		logger.Error("error reading the configuration file", zap.String("file", fname), zap.Error(err))
+		logger.Error("error reading the configuration file", zap.String("file", cf), zap.Error(err))
 		return nil, err
 	}
 
-	b, err := unmarshalBasicConfig(data, fname, logger)
-	mc, err := ec.Metrics.UnmarshalConfig(data, fname, logger)
+	b, err := unmarshalBasicConfig(data, cf, logger)
+	mc, err := ec.Metrics.UnmarshalConfig(data, cf, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := AppConfig{
-		Logging:      b.Logging,
-		Verbose:      b.Verbose,
-		PIDPath:      b.Arachne.PIDPath,
-		Orchestrator: b.Arachne.Orchestrator,
-		Metrics:      mc,
+		Logging:                b.Logging,
+		Verbose:                b.Verbose,
+		PIDPath:                b.Arachne.PIDPath,
+		Orchestrator:           b.Arachne.Orchestrator,
+		StandaloneTargetConfig: b.Arachne.StandaloneTargetConfig,
+		Metrics:                mc,
 	}
 
 	return &cfg, nil
@@ -282,23 +249,25 @@ func FetchRemoteList(
 	remotes := make(RemoteStore, maxNumRemoteTargets)
 
 	// Standalone (non-Orchestrator) mode
-	if !*(gl.CLI.OrchestratorMode) {
-		logger.Debug("Orchestrator mode disabled")
-		if err := localFileReadable(*gl.CLI.TargetsLocalPath); err != nil {
+	if !gl.App.Orchestrator.Enabled {
+		logger.Debug("Orchestrator mode disabled, using static target config file.",
+			zap.String("path", gl.App.StandaloneTargetConfig))
+
+		if err := localFileReadable(gl.App.StandaloneTargetConfig); err != nil {
 			logger.Fatal("unable to retrieve local configuration file",
-				zap.String("file", *gl.CLI.TargetsLocalPath),
+				zap.String("file", gl.App.StandaloneTargetConfig),
 				zap.Error(err))
 		}
-		logger.Info("Configuration file", zap.String("file", *gl.CLI.TargetsLocalPath))
+		logger.Info("Configuration file", zap.String("file", gl.App.StandaloneTargetConfig))
 
-		raw, err := ioutil.ReadFile(*gl.CLI.TargetsLocalPath)
+		raw, err := ioutil.ReadFile(gl.App.StandaloneTargetConfig)
 		if err != nil {
 			return fmt.Errorf("file error: %v", err)
 		}
 		if err := readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts, minBatchInterval,
 			logger); err != nil {
 			logger.Fatal("error parsing default target list file",
-				zap.String("file", *gl.CLI.TargetsLocalPath),
+				zap.String("file", gl.App.StandaloneTargetConfig),
 				zap.Error(err))
 		}
 		gl.Remotes = remotes

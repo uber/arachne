@@ -37,6 +37,5 @@ func main() {
 	arachne.Run(
 		ec,
 		arachne.ReceiverOnlyMode(false),
-		arachne.OrchestratorMode(false),
 	)
 }

@@ -4,13 +4,12 @@ import:
   subpackages:
   - statsd
 - package: github.com/fatih/color
-- package: github.com/fsnotify/fsnotify
 - package: github.com/jawher/mow.cli
 - package: github.com/miekg/dns
 - package: github.com/spacemonkeygo/monotime
-- package: github.com/spf13/viper
 - package: github.com/uber/uber-licence
 - package: github.com/uber-go/zap
+  version: master
 - package: gopkg.in/validator.v2
 - package: gopkg.in/yaml.v2
 testImport:

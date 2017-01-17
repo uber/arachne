@@ -37,7 +37,6 @@ func Example_run_arachne() {
 	arachne.Run(
 		ec,
 		arachne.ReceiverOnlyMode(false),
-		arachne.OrchestratorMode(false),
 	)
 
 }

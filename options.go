@@ -56,12 +56,3 @@ func SenderOnlyMode(b bool) Option {
 		return SenderOnlyMode(previous)
 	}
 }
-
-// OrchestratorMode sets orchestrator mode to `b`.
-func OrchestratorMode(b bool) Option {
-	return func(gl *config.Global) Option {
-		previous := *gl.CLI.OrchestratorMode
-		*gl.CLI.OrchestratorMode = b
-		return OrchestratorMode(previous)
-	}
-}
