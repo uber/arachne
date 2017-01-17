@@ -42,7 +42,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const DefaultConfigFile = "/etc/arachne/arachne.yaml"
+const defaultConfigFile = "/etc/arachne/arachne.yaml"
 
 // ArachneConfiguration contains specific configuration to Arachne.
 type ArachneConfiguration struct {
@@ -173,8 +173,8 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 	app.Spec = "[--foreground] [-c=<config_file>] [--receiver_only] [--sender_only]"
 
 	args.Foreground = app.BoolOpt("foreground", false, "Force foreground mode")
-	args.ConfigFile = app.StringOpt("c config_file", DefaultConfigFile,
-		fmt.Sprintf("Agent's primary yaml configuration file (by default: %s)", DefaultConfigFile))
+	args.ConfigFile = app.StringOpt("c config_file", defaultConfigFile,
+		fmt.Sprintf("Agent's primary yaml configuration file (by default: %s)", defaultConfigFile))
 	args.ReceiverOnlyMode = app.BoolOpt("receiver_only", false, "Force TCP receiver-only mode")
 	args.SenderOnlyMode = app.BoolOpt("sender_only", false, "Force TCP sender-only mode")
 
