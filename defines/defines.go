@@ -35,7 +35,6 @@ const (
 	BatchIntervalUploadStats        = 0.95
 	ChannelInBufferSize             = 800
 	ChannelOutBufferSize            = 800
-	DefaultConfigFile               = "/etc/arachne/arachne.yaml"
 	DNSRefreshInterval              = 12 * time.Hour
 	HTTPResponseHeaderTimeout       = 10 * time.Second
 	LogFileSizeMaxMB                = 15
