@@ -8,7 +8,7 @@ ${builddir}:
 	mkdir -p $(builddir)
 
 .PHONY: bins
-bins:
+bins: install_ci
 	go build -o ${builddir}/arachned github.com/uber/arachne/arachned/
 
 all: bins
@@ -22,7 +22,7 @@ lint:
 	go vet $(PACKAGES)
 
 .PHONY: test
-test: check-license lint
+test: check-license lint install_ci
 	find . -type f -name '*.go' | xargs golint
 	go test $(PACKAGES)
 

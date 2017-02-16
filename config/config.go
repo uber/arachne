@@ -61,7 +61,6 @@ type OrchestratorConfig struct {
 // BasicConfig holds the basic parameter configurations for the application.
 type BasicConfig struct {
 	Logging log.Config           `yaml:"logging"`
-	Verbose bool                 `yaml:"verbose"`
 	Arachne ArachneConfiguration `yaml:"arachne"`
 }
 
@@ -203,11 +202,15 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 
 	cfg := AppConfig{
 		Logging:                b.Logging,
-		Verbose:                b.Verbose,
 		PIDPath:                b.Arachne.PIDPath,
 		Orchestrator:           b.Arachne.Orchestrator,
 		StandaloneTargetConfig: b.Arachne.StandaloneTargetConfig,
 		Metrics:                mc,
+	}
+
+	if cfg.Orchestrator.Enabled && cfg.StandaloneTargetConfig == "" {
+		logger.Error("the standalone-mode target configuration file has not been specified")
+		return nil, err
 	}
 
 	return &cfg, nil
@@ -254,7 +257,7 @@ func FetchRemoteList(
 			zap.String("path", gl.App.StandaloneTargetConfig))
 
 		if err := localFileReadable(gl.App.StandaloneTargetConfig); err != nil {
-			logger.Fatal("unable to retrieve local configuration file",
+			logger.Fatal("unable to retrieve local target configuration file",
 				zap.String("file", gl.App.StandaloneTargetConfig),
 				zap.Error(err))
 		}
