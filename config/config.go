@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -210,7 +211,7 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 
 	if !cfg.Orchestrator.Enabled && cfg.StandaloneTargetConfig == "" {
 		logger.Error("the standalone-mode target configuration file has not been specified")
-		return nil, err
+		return nil, errors.New("the standalone-mode target configuration file has not been specified")
 	}
 
 	return &cfg, nil
