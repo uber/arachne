@@ -208,7 +208,7 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 		Metrics:                mc,
 	}
 
-	if cfg.Orchestrator.Enabled && cfg.StandaloneTargetConfig == "" {
+	if !cfg.Orchestrator.Enabled && cfg.StandaloneTargetConfig == "" {
 		logger.Error("the standalone-mode target configuration file has not been specified")
 		return nil, err
 	}
