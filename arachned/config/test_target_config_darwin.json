@@ -19,7 +19,7 @@
     {"ip": "10.10.39.31"},
     {"ip": "10.10.15.27"},
     {"host_name": "compute777.myservers.com"},
-    {"host_name": "chadoop375.myservers.com"}
+    {"host_name": "hadoop375.myservers.com"}
   ],
 
   "external": [
