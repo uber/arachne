@@ -49,7 +49,7 @@ ____________________________________________________________/\\\________________
 
 `
 
-// KillChannels includes all channels to tell goroutines to terminate
+// KillChannels includes all channels to tell goroutines to terminate.
 type KillChannels struct {
 	Receiver   chan struct{}
 	Echo       chan struct{}

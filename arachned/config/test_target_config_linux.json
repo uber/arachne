@@ -17,6 +17,13 @@
 
   "internal": [
     {"ip": "10.10.39.31"},
-    {"ip": "10.10.15.27"}
+    {"ip": "10.10.15.27"},
+    {"host_name": "compute777.myservers.com"},
+    {"host_name": "hadoop375.myservers.com"}
+  ],
+
+  "external": [
+    {"host_name": "payments.service.org"},
+    {"host_name": "maps.service.com"}
   ]
 }

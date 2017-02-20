@@ -151,7 +151,7 @@ func (rs resultStore) walkResults(
 	}
 }
 
-// processResults calculates metrics, uploads stats and stores in results[] for stdout, if needed
+// processResults calculates metrics, uploads stats and stores in results[] for stdout, if needed.
 func (rs resultStore) processResults(
 	gl *config.Global,
 	remotes config.RemoteStore,
@@ -390,7 +390,7 @@ func statsUpload(
 
 }
 
-// zeroOutResults fills latencies for targets not existing in resultStore with zeros
+// zeroOutResults fills latencies for targets not existing in resultStore with zeros.
 func zeroOutResults(
 	glr *config.RemoteConfig,
 	ms messageStore,

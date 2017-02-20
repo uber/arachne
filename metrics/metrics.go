@@ -39,8 +39,8 @@ type Config interface {
 // Tags is an alias of map[string]string, a type for tags associated with a statistic.
 type Tags map[string]string
 
-// Reporter is an interface for stats reporting functions.
-// Its methods take optional tag dictionaries which may be ignored by concrete implementations.
+// Reporter is an interface for stats reporting functions. Its methods take optional
+// tag dictionaries which may be ignored by concrete implementations.
 type Reporter interface {
 	// ReportCounter reports a counter value
 	ReportCounter(name string, tags Tags, value int64)
