@@ -44,19 +44,19 @@ type Config struct {
 	LogSink string    `yaml:"logSink"`
 }
 
-// Fatal extends the zap Fatal to also remove the PID file
+// Fatal extends the zap Fatal to also remove the PID file.
 func (log PIDRemoverLogger) Fatal(msg string, fields ...zap.Field) {
 	log.RemovePID(log.PIDPath, log.Logger)
 	log.Logger.Fatal(msg, fields...)
 }
 
-// Panic extends the zap Panic to also remove the PID file
+// Panic extends the zap Panic to also remove the PID file.
 func (log PIDRemoverLogger) Panic(msg string, fields ...zap.Field) {
 	log.RemovePID(log.PIDPath, log.Logger)
 	log.Logger.Fatal(msg, fields...)
 }
 
-// CreateLogger creates a zap logger
+// CreateLogger creates a zap logger.
 func CreateLogger(
 	c *Config,
 	service string,
@@ -101,7 +101,7 @@ func CreateLogger(
 }
 
 // ResetLogFile keeps the last 'LogFileSizeKeepKB' KB of the log file if the size of the log file
-// has exceeded 'LogFileSizeMaxMB' MB within the last 'PollOrchestratorIntervalSuccess' hours
+// has exceeded 'LogFileSizeMaxMB' MB within the last 'PollOrchestratorIntervalSuccess' hours.
 func ResetLogFile(logFilePath string, fileSizeMaxMB int, fileSizeKeepKB int, logger zap.Logger) error {
 	file, err := os.Open(logFilePath)
 	if err != nil {

@@ -70,7 +70,7 @@ type Extended struct {
 	Metrics metrics.Opt
 }
 
-// RemoteStore holds all Remotes
+// RemoteStore holds all Remotes.
 type RemoteStore map[string]Remote
 
 // Remote holds the info for every target to be echoed.
@@ -191,11 +191,14 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 
 	data, err := ioutil.ReadFile(cf)
 	if err != nil {
-		logger.Error("error reading the configuration file", zap.String("file", cf), zap.Error(err))
 		return nil, err
 	}
 
 	b, err := unmarshalBasicConfig(data, cf, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	mc, err := ec.Metrics.UnmarshalConfig(data, cf, logger)
 	if err != nil {
 		return nil, err
@@ -210,33 +213,28 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 	}
 
 	if !cfg.Orchestrator.Enabled && cfg.StandaloneTargetConfig == "" {
-		logger.Error("the standalone-mode target configuration file has not been specified")
 		return nil, errors.New("the standalone-mode target configuration file has not been specified")
 	}
 
 	return &cfg, nil
 }
 
-// unmarshalBasicConfig fetches the configuration file from local path
+// unmarshalBasicConfig fetches the configuration file from local path.
 func unmarshalBasicConfig(data []byte, fname string, logger zap.Logger) (*BasicConfig, error) {
 
 	cfg := new(BasicConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		logger.Error("error unmarshaling the configuration file",
-			zap.String("file", fname),
-			zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling the configuration file %s: %v", fname, err)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		logger.Error("invalid info in configuration file", zap.String("file", fname), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("invalid info in configuration file %s: %v", fname, err)
 	}
 
 	return cfg, nil
 }
 
-// FetchRemoteList fetches the configuration file from local path or, remotely, from Arachne Orchestrator
+// FetchRemoteList fetches the configuration file from local path or, remotely, from Arachne Orchestrator.
 func FetchRemoteList(
 	gl *Global,
 	maxNumRemoteTargets int,
@@ -298,7 +296,7 @@ func FetchRemoteList(
 	return err
 }
 
-// createHTTPClient returns an HTTP client to connect to remote server
+// createHTTPClient returns an HTTP client to connect to remote server.
 func createHTTPClient(timeout time.Duration, disableKeepAlives bool) *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -313,7 +311,7 @@ func createHTTPClient(timeout time.Duration, disableKeepAlives bool) *http.Clien
 	return client
 }
 
-// GetHostname returns the hostname
+// GetHostname returns the hostname.
 func GetHostname(logger zap.Logger) (string, error) {
 	host, err := os.Hostname()
 	if err != nil {
@@ -323,7 +321,7 @@ func GetHostname(logger zap.Logger) (string, error) {
 	return host, nil
 }
 
-// refreshRemoteList checks with Arachne Orchestrator if new a config file should be fetched
+// refreshRemoteList checks with Arachne Orchestrator if new a config file should be fetched.
 func refreshRemoteList(
 	gl *Global,
 	remotes RemoteStore,
@@ -339,8 +337,6 @@ func refreshRemoteList(
 	retryTime := gl.RemoteConfig.PollOrchestratorInterval.Failure
 
 	for {
-		var err error
-
 		hostname, _ := GetHostname(logger)
 		RESTReq := fmt.Sprintf("http://%s/%s/%s?hostname=%s",
 			gl.App.Orchestrator.AddrPort,
@@ -399,7 +395,7 @@ func fetchRemoteListFromOrchestrator(
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		logger.Debug("NewRequest", zap.Error(err))
+		logger.Warn("NewRequest", zap.Error(err))
 		return 0, nil, err
 	}
 	resp, err := client.Do(req)
@@ -415,19 +411,14 @@ func fetchRemoteListFromOrchestrator(
 	switch resp.StatusCode {
 	case http.StatusOK:
 		logger.Debug("HTTP response status code from Orchestrator")
-
-		if bResp, err = ioutil.ReadAll(resp.Body); err != nil {
-			break
-		}
-
+		bResp, err = ioutil.ReadAll(resp.Body)
 	case http.StatusNotFound:
-		logger.Error("HTTP response from Orchestrator: 'Idle mode'")
+		err = fmt.Errorf("HTTP response from Orchestrator: 'Idle mode'")
 	case http.StatusBadRequest:
-		logger.Error("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
+		err = fmt.Errorf("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
 	case http.StatusInternalServerError:
 		logger.Warn("HTTP response from Orchestrator: Error opening requested configuration file")
 	default:
-		logger.Error("unhandled HTTP response from Orchestrator")
 		err = fmt.Errorf("unhandled HTTP response from Orchestrator")
 	}
 
@@ -452,8 +443,7 @@ func readRemoteList(
 	c := new(RemoteFileConfig)
 
 	if err := json.Unmarshal(raw, c); err != nil {
-		logger.Error("configuration file parse error", zap.Error(err))
-		return err
+		return fmt.Errorf("configuration file parse error (%v)", err)
 	}
 
 	// Populate global variables
@@ -479,7 +469,7 @@ func readRemoteList(
 		srcIP, err = network.GetSourceAddr("ip6", strings.ToLower(c.Local.SrcAddress),
 			glRC.HostName, glRC.InterfaceName, logger)
 		if err != nil {
-			return fmt.Errorf("could not retrieve an IPv4 or IPv6 source address")
+			return fmt.Errorf("could not retrieve an IPv4 or IPv6 source address (%v)", err)
 		}
 	}
 	glRC.SrcAddress = *srcIP
@@ -487,7 +477,7 @@ func readRemoteList(
 
 	glRC.TargetTCPPort = c.Local.TargetTCPPort
 	if glRC.Timeout, err = time.ParseDuration(c.Local.Timeout); err != nil {
-		return fmt.Errorf("failed to parse the timeout")
+		return fmt.Errorf("failed to parse the timeout (%v)", err)
 	}
 	glRC.SrcTCPPortRange[0] = c.Local.BaseSrcTCPPort
 	if c.Local.NumSrcTCPPorts > maxNumSrcTCPPorts {
@@ -502,18 +492,18 @@ func readRemoteList(
 			"source ports [%d-%d]", glRC.SrcTCPPortRange[0], glRC.SrcTCPPortRange[1])
 	}
 	if glRC.BatchInterval, err = time.ParseDuration(c.Local.BatchInterval); err != nil {
-		return fmt.Errorf("failed to parse the batch interval")
+		return fmt.Errorf("failed to parse the batch interval (%v)", err)
 	}
 	if glRC.BatchInterval < minBatchInterval {
 		return fmt.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
 	}
 	if glRC.PollOrchestratorInterval.Success, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalSuccess); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for success")
+		return fmt.Errorf("failed to parse the Orchestrator poll interval for success (%v)", err)
 	}
 	if glRC.PollOrchestratorInterval.Failure, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalFailure); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for failure")
+		return fmt.Errorf("failed to parse the Orchestrator poll interval for failure (%v)", err)
 	}
 
 	glRC.QoSEnabled = isTrue(c.Local.QoSEnabled)
@@ -541,7 +531,7 @@ func readRemoteList(
 	return nil
 }
 
-// Validate and create map of ipv4 and ipv6 addresses with string as their key
+// Validate and create map of ipv4 and ipv6 addresses with string as their key.
 func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger zap.Logger) {
 
 	for _, t := range ts {
@@ -567,7 +557,8 @@ func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, 
 				zap.String("target", currIP.String()))
 			continue
 		}
-		remotes[currIP.String()] = Remote{currIP, network.Family(&currIP), t.HostName, ext}
+		remotes[currIP.String()] = Remote{currIP, network.Family(&currIP),
+			t.HostName, ext}
 	}
 }
 

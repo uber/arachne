@@ -63,7 +63,7 @@ func GetSourceAddr(
 	return anyInterfaceAddress(af)
 }
 
-// Resolve given domain hostname/address in the given address family
+// Resolve given domain hostname/address in the given address family.
 //TODO replace with net.LookupHost?
 func resolveHost(af string, hostname string, logger zap.Logger) (*net.IP, error) {
 	addr, err := net.ResolveIPAddr(af, hostname)

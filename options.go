@@ -48,7 +48,7 @@ func ReceiverOnlyMode(b bool) Option {
 	}
 }
 
-// SenderOnlyMode sets sender-only mode to `b`.
+// SenderOnlyMode sets sender-only mode to `b.`
 func SenderOnlyMode(b bool) Option {
 	return func(gl *config.Global) Option {
 		previous := *gl.CLI.ReceiverOnlyMode

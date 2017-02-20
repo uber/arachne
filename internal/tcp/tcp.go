@@ -48,10 +48,10 @@ const (
 
 type echoType uint8
 
-// PortRange is the inclusive range of src ports
+// PortRange is the inclusive range of src ports.
 type PortRange [2]uint16
 
-// Contains returns true if p is included within the PortRange t
+// Contains returns true if p is included within the PortRange t.
 func (t PortRange) Contains(p uint16) bool {
 	return p >= t[0] && p <= t[1]
 }
@@ -84,7 +84,7 @@ type tcpPacket struct {
 	tcpPayload
 }
 
-// Defines the TCP header struct
+// tcpHeader defines the TCP header struct,
 type tcpHeader struct {
 	srcPort    uint16
 	dstPort    uint16
@@ -106,7 +106,7 @@ type tcpOption struct {
 	Data   []byte
 }
 
-// Defines the TCP payload struct
+// tcpPayload defines the TCP payload struct.
 type tcpPayload struct {
 	Ts time.Time
 }
@@ -133,10 +133,10 @@ type Timestamp struct {
 	Payload time.Time
 }
 
-// DSCPValue represents a QoS DSCP value
+// DSCPValue represents a QoS DSCP value.
 type DSCPValue uint8
 
-// QoS DSCP values mapped to TOS
+// QoS DSCP values mapped to TOS.
 const (
 	DSCPBeLow     DSCPValue = 0   // 000000 BE
 	DSCPBeHigh    DSCPValue = 4   // 000001 BE
@@ -151,7 +151,7 @@ const (
 	DSCPNc7       DSCPValue = 224 // 111000 CS7
 )
 
-// GetDSCP holds all the DSCP values in a slice
+// GetDSCP holds all the DSCP values in a slice.
 var GetDSCP = DSCPSlice{
 	DSCPBeLow,
 	DSCPBeHigh,
@@ -166,10 +166,10 @@ var GetDSCP = DSCPSlice{
 	DSCPNc7,
 }
 
-// DSCPSlice represents a slice of DSCP values
+// DSCPSlice represents a slice of DSCP values.
 type DSCPSlice []DSCPValue
 
-// Pos returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value
+// Pos returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value.
 func (slice DSCPSlice) Pos(value DSCPValue, logger zap.Logger) uint8 {
 
 	for p, v := range slice {
@@ -183,7 +183,7 @@ func (slice DSCPSlice) Pos(value DSCPValue, logger zap.Logger) uint8 {
 	return 0
 }
 
-// Text provides the text description of the DSCPValue
+// Text provides the text description of the DSCPValue.
 func (q DSCPValue) Text(logger zap.Logger) string {
 	switch q {
 	case DSCPBeLow:
@@ -214,7 +214,7 @@ func (q DSCPValue) Text(logger zap.Logger) string {
 	}
 }
 
-// FromExternalTarget returns true if message has been received from external server and not an arachne agent
+// FromExternalTarget returns true if message has been received from external server and not an arachne agent.
 func (m Message) FromExternalTarget(servicePort uint16) bool {
 	return m.DstPort != servicePort
 }
@@ -224,7 +224,7 @@ var (
 	timeNow = time.Now
 )
 
-// Parse TCP Echo header from received packet
+// Parse TCP Echo header from received packet.
 func parsePkt(data []byte, listenPort uint16) (*tcpPacket, bool) {
 	var pkt tcpPacket
 
@@ -268,7 +268,7 @@ func parsePkt(data []byte, listenPort uint16) (*tcpPacket, bool) {
 	return &pkt, true
 }
 
-// Create & serialize a TCP Echo
+// makePkt creates and serializes a TCP Echo.
 func makePkt(
 	af string,
 	srcAddr *net.IP,
@@ -311,7 +311,7 @@ func makePkt(
 	return packet.Marshal(), nil
 }
 
-// Marshal emits raw bytes for the packet
+// Marshal emits raw bytes for the packet.
 func (pkt *tcpPacket) Marshal() []byte {
 
 	buf := new(bytes.Buffer)
@@ -405,8 +405,7 @@ func checksum(af string, data []byte, srcip, dstip *net.IP) (uint16, error) {
 	return uint16(^csum), nil
 }
 
-// Receiver checks if the incoming packet is actually a response to our probe and
-// acts accordingly
+// Receiver checks if the incoming packet is actually a response to our probe and acts accordingly.
 //TODO Test IPv6
 func Receiver(
 	af string,
@@ -587,7 +586,7 @@ func Receiver(
 	return nil
 }
 
-// EchoTargets sends echoes (SYNs) to all targets included in 'remotes'
+// EchoTargets sends echoes (SYNs) to all targets included in 'remotes.'
 func EchoTargets(
 	remotes interface{},
 	srcAddr *net.IP,
@@ -698,8 +697,8 @@ func echoTargetsWorker(
 	return nil
 }
 
-// Sender generates TCP packet probes with given TTL at given packet per second rate
-// The packet are injected into raw socket and their descriptions are published to the output channel as Probe messages
+// Sender generates TCP packet probes with given TTL at given packet per second rate.
+// The packet are injected into raw socket and their descriptions are published to the output channel as Probe messages.
 //TODO Test IPv6
 func send(
 	af string,

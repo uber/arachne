@@ -68,22 +68,18 @@ var (
 	_ Config = (*StatsdConfig)(nil)
 )
 
-// UnmarshalConfig fetches the configuration file from local path
+// UnmarshalConfig fetches the configuration file from local path.
 func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string, logger zap.Logger) (Config, error) {
 
 	cfg := new(StatsdConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		logger.Error("error unmarshaling the statsd section in the configuration file",
-			zap.String("file", fname),
-			zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling the statsd section in the configuration file %s: %v",
+			fname, err)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		logger.Error("invalid info in the statsd section in the configuration file",
-			zap.String("file", fname),
-			zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("invalid info in the statsd section in the configuration file %s: %v",
+			fname, err)
 	}
 
 	return Config(cfg), nil

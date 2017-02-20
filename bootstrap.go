@@ -49,6 +49,9 @@ func Run(ec *config.Extended, opts ...Option) {
 	apply(&gl, opts...)
 	gl.App, err = config.Get(*gl.CLI.ConfigFile, ec, bootstrapLogger)
 	if err != nil {
+		bootstrapLogger.Error("error reading the configuration file",
+			zap.String("file", *gl.CLI.ConfigFile),
+			zap.Error(err))
 		os.Exit(1)
 	}
 
