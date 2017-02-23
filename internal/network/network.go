@@ -81,15 +81,13 @@ func resolveHost(af string, hostname string, logger zap.Logger) (*net.IP, error)
 func ResolveIP(ip string, servers []net.IP, logger zap.Logger) (string, error) {
 
 	names, err := net.LookupAddr(ip)
-	if err != nil {
+	if err != nil || len(names) == 0 {
 		logger.Warn("failed to DNS resolve IP with default server",
 			zap.String("ip", ip),
 			zap.Error(err))
 		return resolveIPwServer(ip, servers, logger)
 	}
-	if len(names) == 0 {
-		return resolveIPwServer(ip, servers, logger)
-	}
+
 	return names[0], nil
 }
 
@@ -109,11 +107,7 @@ func resolveIPwServer(ip string, servers []net.IP, logger zap.Logger) (string, e
 	m.SetQuestion(fqdn, dns.TypePTR)
 	for _, s := range servers {
 		r, t, err := c.Exchange(&m, s.String()+":53")
-		if err != nil {
-			continue
-		}
-		if len(r.Answer) == 0 {
-			err = fmt.Errorf("reverse DNS resolution with own server returned no results")
+		if err != nil || len(r.Answer) == 0 {
 			continue
 		}
 		logger.Debug("Reverse DNS resolution for ip with user-configured DNS server took",
