@@ -1,4 +1,4 @@
-# Arachne [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] 
+# Arachne [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Go Report Card][gorep-img]][gorep]
 
 Arachne is a packet loss detection system and an underperforming path detection
 system. It provides fast and easy active end-to-end functional testing
@@ -78,3 +78,5 @@ Released under the [MIT License](LICENSE).
 [ci-img]: https://travis-ci.org/uber/arachne.svg?branch=master
 [ci]: https://travis-ci.org/uber/arachne
 [capabilities]: http://linux.die.net/man/7/capabilities
+[gorep-img]: https://goreportcard.com/badge/github.com/uber/arachne
+[gorep]: https://goreportcard.com/report/github.com/uber/arachne
