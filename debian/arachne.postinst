@@ -24,11 +24,6 @@ case "$1" in
 	mkdir -p /var/arachne /var/log/arachne /var/run/arachne
 	chmod -R 0775 /var/arachne /var/log/arachne /var/run/arachne
 	rm -f /var/run/arachne/arachne.pid
-
-    echo "Disabling offloading to NIC chip"
-    for x in tx rx sg gso tso gro; do
-        ethtool -K eth0 "$x" off || echo "failed to disable '$x'" >/dev/stderr
-    done
   ;;
 
 esac
