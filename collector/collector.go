@@ -255,8 +255,9 @@ func batchWorker(
 		select {
 		case out := <-sentC:
 			if out.Type != tcp.EchoRequest {
-				logger.Fatal("unexpected 'echo' type received in 'out' by collector.",
+				logger.Error("unexpected 'echo' type received in 'out' by collector.",
 					zap.Object("type", out.Type))
+				continue
 			}
 			QosDSCPIndex := (tcp.GetDSCP).Pos(out.QosDSCP, logger)
 
@@ -278,6 +279,7 @@ func batchWorker(
 			if in.Type != tcp.EchoReply {
 				logger.Error("unexpected 'echo' type received in 'in' by collector.",
 					zap.Object("type", in.Type))
+				continue
 			}
 			QosDSCPIndex := (tcp.GetDSCP).Pos(in.QosDSCP, logger)
 
@@ -371,8 +373,9 @@ func statsUpload(
 ) {
 	remote, existsTarget := remotes[target]
 	if !existsTarget {
-		logger.Fatal("host exists in resultStore, but not in remoteStore",
+		logger.Error("host exists in resultStore, but not in remoteStore",
 			zap.String("host", target))
+		return
 	}
 
 	tags := map[string]string{
