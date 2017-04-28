@@ -468,9 +468,10 @@ func Receiver(
 
 			// IP + TCP header size
 			if n < ipHdrSize+tcpHdrSize {
-				logger.Fatal("n < ipHdrSize + tcpHdrSize",
+				logger.Error("n < ipHdrSize + tcpHdrSize",
 					zap.Int("ipHdrSize", ipHdrSize),
 					zap.Int("tcpHdrSize", tcpHdrSize))
+				continue
 			}
 
 			pkt, destinedToArachne := parsePkt(rawPacket[ipHdrSize:], listenPort)
@@ -514,7 +515,7 @@ func Receiver(
 				err = send(af, srcAddr, &fromAddr, listenPort, srcPortRange, DSCPv,
 					syn|ack, seqNum, ackNum, sentC, kill, logger)
 				if err != nil {
-					logger.Fatal("failed to send SYN-ACK", zap.Error(err))
+					logger.Error("failed to send SYN-ACK", zap.Error(err))
 				}
 
 			case pkt.hasFlag(syn) && pkt.hasFlag(ack):
@@ -549,7 +550,7 @@ func Receiver(
 					err = send(af, srcAddr, &fromAddr, defines.PortHTTPS, srcPortRange,
 						DSCPBeLow, rst, seqNum, ackNum, sentC, kill, logger)
 					if err != nil {
-						logger.Fatal("failed to send RST", zap.Error(err))
+						logger.Error("failed to send RST", zap.Error(err))
 					}
 				}
 
