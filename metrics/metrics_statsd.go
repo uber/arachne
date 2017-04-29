@@ -25,7 +25,8 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/uber-go/zap"
+	"github.com/uber/arachne/internal/log"
+	"go.uber.org/zap"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
 )
@@ -69,7 +70,7 @@ var (
 )
 
 // UnmarshalConfig fetches the configuration file from local path.
-func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string, logger zap.Logger) (Config, error) {
+func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string) (Config, error) {
 
 	cfg := new(StatsdConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
@@ -86,14 +87,14 @@ func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string, logger zap.Lo
 }
 
 // NewReporter creates a new metrics backend talking to Statsd.
-func (c StatsdConfig) NewReporter(logger zap.Logger) (Reporter, error) {
+func (c StatsdConfig) NewReporter(logger *log.Logger) (Reporter, error) {
 	s, err := statsd.New(c.Metrics.Statsd.HostPort)
 	if err != nil {
 		return nil, err
 	}
 	// add service as prefix
 	s.Namespace = fmt.Sprintf("%s.", "arachne")
-	logger.Info("Statsd Metrics configuration", zap.Object("object", fmt.Sprintf("%+v", s)))
+	logger.Info("Statsd Metrics configuration", zap.Any("object", fmt.Sprintf("%+v", s)))
 
 	return &statsdReporter{client: s}, nil
 }

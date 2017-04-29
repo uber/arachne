@@ -28,11 +28,13 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const hostWidth = 51
@@ -123,13 +125,13 @@ func (rs resultStore) add(target string, QosDSCPIndex uint8, srcPort uint16, r r
 	rs[target][QosDSCPIndex][srcPort] = r
 }
 
-type resultWalker func(report, string, uint16, bool, zap.Logger)
+type resultWalker func(report, string, uint16, bool, *log.Logger)
 
 func (rs resultStore) walkResults(
 	remotes config.RemoteStore,
 	currentDSCP *tcp.DSCPValue,
 	foreground bool,
-	logger zap.Logger,
+	logger *log.Logger,
 	walkerF ...resultWalker) {
 
 	for target, r := range rs {
@@ -158,7 +160,7 @@ func (rs resultStore) processResults(
 	target string,
 	req tcp.Message,
 	rep tcp.Message,
-	logger zap.Logger,
+	logger *log.Logger,
 ) report {
 
 	// Calculate metrics
@@ -191,7 +193,7 @@ func (rs resultStore) printResults(
 	gl *config.Global,
 	remotes config.RemoteStore,
 	currentDSCP *tcp.DSCPValue,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	foreground := *gl.CLI.Foreground
 
@@ -211,7 +213,7 @@ func Run(
 	completeCycleUpload chan bool,
 	wg *sync.WaitGroup,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	go func() {
 		for {
@@ -248,7 +250,7 @@ func batchWorker(
 	completeCycleUpload chan bool,
 	kill chan struct{},
 	wg *sync.WaitGroup,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	for {
 
@@ -256,7 +258,7 @@ func batchWorker(
 		case out := <-sentC:
 			if out.Type != tcp.EchoRequest {
 				logger.Error("unexpected 'echo' type received in 'out' by collector.",
-					zap.Object("type", out.Type))
+					zap.Any("type", out.Type))
 				continue
 			}
 			QosDSCPIndex := (tcp.GetDSCP).Pos(out.QosDSCP, logger)
@@ -269,7 +271,7 @@ func batchWorker(
 			matchedMsg, existsMatch := ms.existsRcvd(targetKey, QosDSCPIndex, out.SrcPort)
 			if existsMatch && matchedMsg.Type == tcp.EchoReply && matchedMsg.Ack == out.Seq+1 {
 				logger.Debug("response already exists for same target",
-					zap.Object("message", matchedMsg))
+					zap.Any("message", matchedMsg))
 
 				report := rs.processResults(gl, remotes, targetKey, out, matchedMsg, logger)
 				sfn(gl.RemoteConfig, sr, targetKey, remotes, out.QosDSCP, out.SrcPort, &report, logger)
@@ -278,7 +280,7 @@ func batchWorker(
 		case in := <-rcvdC:
 			if in.Type != tcp.EchoReply {
 				logger.Error("unexpected 'echo' type received in 'in' by collector.",
-					zap.Object("type", in.Type))
+					zap.Any("type", in.Type))
 				continue
 			}
 			QosDSCPIndex := (tcp.GetDSCP).Pos(in.QosDSCP, logger)
@@ -307,15 +309,15 @@ func batchWorker(
 				}
 				logger.Debug("received following response",
 					zap.String("non-existing", u),
-					zap.Object("response", ms[targetKey][QosDSCPIndex].rcvd[in.SrcPort]),
+					zap.Any("response", ms[targetKey][QosDSCPIndex].rcvd[in.SrcPort]),
 					zap.String("source_address", targetKey))
 				continue
 			}
 
 			if in.Ack != probe.Seq+1 {
 				logger.Warn("unmatched ACK",
-					zap.Object("in_ACK", in.Ack),
-					zap.Object("out_SEQ", probe.Seq),
+					zap.Any("in_ACK", in.Ack),
+					zap.Any("out_SEQ", probe.Seq),
 					zap.String("source_address", in.SrcAddr.String()))
 				continue
 			}
@@ -326,13 +328,13 @@ func batchWorker(
 			for key, value := range ms {
 				logger.Debug("At end of batch cycle, sent and received 'messages' of",
 					zap.String("host", key),
-					zap.Object("messages", value))
+					zap.Any("messages", value))
 			}
 
 			for key, value := range rs {
 				logger.Debug("At end of batch cycle, 'result' of",
 					zap.String("host", key),
-					zap.Object("result", value))
+					zap.Any("result", value))
 			}
 
 			if !*gl.CLI.SenderOnlyMode {
@@ -358,7 +360,7 @@ type statsUploader func(
 	QOSDSCP tcp.DSCPValue,
 	srcPort uint16,
 	r *report,
-	logger zap.Logger,
+	logger *log.Logger,
 )
 
 func statsUpload(
@@ -369,7 +371,7 @@ func statsUpload(
 	QOSDSCP tcp.DSCPValue,
 	srcPort uint16,
 	r *report,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	remote, existsTarget := remotes[target]
 	if !existsTarget {
@@ -401,7 +403,7 @@ func zeroOutResults(
 	remotes config.RemoteStore,
 	sfn statsUploader,
 	sr metrics.Reporter,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	timedOutReport := report{
 		latency2Way: 0,
@@ -432,7 +434,7 @@ func zeroOutResults(
 	}
 }
 
-func printTableHeader(gl *config.Global, currentDSCP string, logger zap.Logger) {
+func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger) {
 	color.Set(color.FgHiYellow, color.Bold)
 	defer color.Unset()
 
@@ -449,13 +451,13 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger zap.Logger) 
 		logger.Info("Arachne -- Table of Results",
 			zap.String("version", defines.ArachneVersion),
 			zap.String("hostname", gl.RemoteConfig.HostName),
-			zap.Object("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
+			zap.Any("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
 			zap.String("QoS_DSCP", currentDSCP),
 		)
 	}
 }
 
-func printTableFooter(foreground bool, logger zap.Logger) {
+func printTableFooter(foreground bool, logger *log.Logger) {
 	color.Set(color.FgHiYellow)
 	defer color.Unset()
 
@@ -471,9 +473,9 @@ func printTableEntry(
 	targetHost string,
 	srcPort uint16,
 	foreground bool,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
-	var twoWay, oneWay zap.Field
+	var twoWay, oneWay zapcore.Field
 
 	color.Set(color.FgHiYellow)
 	defer color.Unset()
@@ -514,7 +516,8 @@ func printTableEntry(
 		logger.Info("Result",
 			zap.String("host", targetHost),
 			zap.Int("source_port", int(srcPort)),
-			zap.Nest("latency", twoWay, oneWay),
+			zap.Any("two_way_latency", twoWay),
+			zap.Any("one_way_latency", oneWay),
 			zap.String("timed_out", timedOut))
 	}
 }

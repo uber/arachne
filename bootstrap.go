@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/collector"
 	"github.com/uber/arachne/config"
 	d "github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/internal/util"
+	"go.uber.org/zap"
 )
 
 // Run is the entry point for initiating any Arachne service.
@@ -41,7 +41,12 @@ func Run(ec *config.Extended, opts ...Option) {
 		err error
 	)
 
-	bootstrapLogger := zap.New(zap.NewJSONEncoder())
+	bl, _ := zap.NewProduction()
+	bootstrapLogger := &log.Logger{
+		Logger:    bl,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	util.PrintBanner()
 
@@ -59,7 +64,8 @@ func Run(ec *config.Extended, opts ...Option) {
 	logger, err := log.CreateLogger(&gl.App.Logging, d.ArachneService, osHostname,
 		gl.App.PIDPath, util.RemovePID, *(gl.CLI.Foreground), bootstrapLogger)
 	if err != nil {
-		bootstrapLogger.Fatal("unable to initialize Arachne Logger", zap.Error(err))
+		bootstrapLogger.Error("unable to initialize Arachne Logger", zap.Error(err))
+		os.Exit(1)
 	}
 
 	// Channel to be informed if Unix signal has been received
@@ -97,7 +103,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		if err != nil {
 			break
 		}
-		logger.Debug("Global JSON configuration", zap.Object("configuration", gl.RemoteConfig))
+		logger.Debug("Global JSON configuration", zap.Any("configuration", gl.RemoteConfig))
 
 		if len(gl.Remotes) == 0 {
 			logger.Debug("No targets to be echoed have been specified")
@@ -116,7 +122,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			dnsWg.Wait()
 			logger.Debug("Remotes after DNS resolution include",
 				zap.Int("count", len(gl.Remotes)),
-				zap.Object("remotes", gl.Remotes))
+				zap.Any("remotes", gl.Remotes))
 		}
 
 		// Channels for Collector to receive Probes and Responses from.

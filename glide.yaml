@@ -9,7 +9,6 @@ import:
 - package: github.com/spacemonkeygo/monotime
 - package: github.com/uber/uber-licence
 - package: github.com/uber-go/zap
-  version: ^0.0.0
 - package: gopkg.in/validator.v2
 - package: gopkg.in/yaml.v2
 testImport:

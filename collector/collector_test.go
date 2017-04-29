@@ -28,12 +28,12 @@ import (
 
 	"github.com/spacemonkeygo/monotime"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+	"go.uber.org/zap"
 )
 
 func statsUploadMock(
@@ -44,7 +44,7 @@ func statsUploadMock(
 	QOSDSCP tcp.DSCPValue,
 	srcPort uint16,
 	r *report,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	return
 }

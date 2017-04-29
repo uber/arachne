@@ -26,7 +26,8 @@ import (
 	"strings"
 
 	"github.com/miekg/dns"
-	"github.com/uber-go/zap"
+	"github.com/uber/arachne/internal/log"
+	"go.uber.org/zap"
 )
 
 // Family returns the string equivalent of the address family provided.
@@ -46,7 +47,7 @@ func GetSourceAddr(
 	srcAddr string,
 	hostname string,
 	ifaceName string,
-	logger zap.Logger,
+	logger *log.Logger,
 ) (*net.IP, error) {
 
 	//TODO => resolve if both interface name and source address are specified and they do not match
@@ -65,7 +66,7 @@ func GetSourceAddr(
 
 // Resolve given domain hostname/address in the given address family.
 //TODO replace with net.LookupHost?
-func resolveHost(af string, hostname string, logger zap.Logger) (*net.IP, error) {
+func resolveHost(af string, hostname string, logger *log.Logger) (*net.IP, error) {
 	addr, err := net.ResolveIPAddr(af, hostname)
 	if err != nil {
 		logger.Warn("failed to DNS resolve hostname with default server",
@@ -78,7 +79,7 @@ func resolveHost(af string, hostname string, logger zap.Logger) (*net.IP, error)
 }
 
 // ResolveIP returns DNS name of given IP address. Returns the same input string, if resolution fails.
-func ResolveIP(ip string, servers []net.IP, logger zap.Logger) (string, error) {
+func ResolveIP(ip string, servers []net.IP, logger *log.Logger) (string, error) {
 
 	names, err := net.LookupAddr(ip)
 	if err != nil || len(names) == 0 {
@@ -91,7 +92,7 @@ func ResolveIP(ip string, servers []net.IP, logger zap.Logger) (string, error) {
 	return names[0], nil
 }
 
-func resolveIPwServer(ip string, servers []net.IP, logger zap.Logger) (string, error) {
+func resolveIPwServer(ip string, servers []net.IP, logger *log.Logger) (string, error) {
 
 	if servers == nil {
 		return "", fmt.Errorf("no alternate DNS servers configured")

@@ -32,8 +32,10 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/monotime"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // TCP flags
@@ -64,14 +66,14 @@ const (
 	EchoReply
 )
 
-func (q echoType) text(logger zap.Logger) string {
+func (q echoType) text(logger *log.Logger) string {
 	switch q {
 	case EchoRequest:
 		return "Echo Request"
 	case EchoReply:
 		return "Echo Reply"
 	default:
-		logger.Fatal("unhandled Echo type family", zap.Object("echo_type", q))
+		logger.Fatal("unhandled Echo type family", zap.Any("echo_type", q))
 	}
 	return "" // unreachable
 }
@@ -170,7 +172,7 @@ var GetDSCP = DSCPSlice{
 type DSCPSlice []DSCPValue
 
 // Pos returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value.
-func (slice DSCPSlice) Pos(value DSCPValue, logger zap.Logger) uint8 {
+func (slice DSCPSlice) Pos(value DSCPValue, logger *log.Logger) uint8 {
 
 	for p, v := range slice {
 		if v == value {
@@ -178,13 +180,13 @@ func (slice DSCPSlice) Pos(value DSCPValue, logger zap.Logger) uint8 {
 		}
 	}
 	logger.Error("QoS DSCP value not matching one of supported classes",
-		zap.Object("DSCP_value", value),
+		zap.Any("DSCP_value", value),
 		zap.String("supported_classes", fmt.Sprintf("%v", slice)))
 	return 0
 }
 
 // Text provides the text description of the DSCPValue.
-func (q DSCPValue) Text(logger zap.Logger) string {
+func (q DSCPValue) Text(logger *log.Logger) string {
 	switch q {
 	case DSCPBeLow:
 		return "BE low"
@@ -209,7 +211,7 @@ func (q DSCPValue) Text(logger zap.Logger) string {
 	case DSCPNc7:
 		return "CS7"
 	default:
-		logger.Error("unhandled QoS DSCP value", zap.Object("DSCP_value", q))
+		logger.Error("unhandled QoS DSCP value", zap.Any("DSCP_value", q))
 		return "unknown"
 	}
 }
@@ -415,7 +417,7 @@ func Receiver(
 	sentC chan Message,
 	rcvdC chan Message,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	var (
@@ -484,8 +486,8 @@ func Receiver(
 			binary.Read(r, binary.BigEndian, &DSCPv)
 			if DSCPv < 0 {
 				logger.Warn("Received packet with invalid QoS DSCP value",
-					zap.Object("DSCP_value", DSCPv),
-					zap.Object("raw_packet", rawPacket))
+					zap.Any("DSCP_value", DSCPv),
+					zap.Any("raw_packet", rawPacket))
 				continue
 			}
 
@@ -498,15 +500,16 @@ func Receiver(
 			default:
 				logger.Fatal("unhandled AF family", zap.String("AF", af))
 			}
-			fromAddrStr := fromAddr.String()
-			logger := logger.With(zap.String("address", fromAddrStr))
+			// TODO
+			//fromAddrStr := fromAddr.String()
+			//logger.Logger = logger.With(zap.String("address", fromAddrStr))
 
 			switch {
 			case pkt.hasFlag(syn) && !pkt.hasFlag(ack):
 				// Received SYN (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN"),
-					zap.Object("port", pkt.dstPort))
+					zap.Any("port", pkt.dstPort))
 
 				// Replying with SYN+ACK to Arachne agent
 				srcPortRange := PortRange{pkt.srcPort, pkt.srcPort}
@@ -522,7 +525,7 @@ func Receiver(
 				// Received SYN+ACK (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN ACK"),
-					zap.Object("port", pkt.srcPort))
+					zap.Any("port", pkt.srcPort))
 
 				inMsg := Message{
 					Type:    EchoReply,
@@ -558,7 +561,7 @@ func Receiver(
 				// Received RST (closed port or reset from other side)
 				logger.Warn("Received",
 					zap.String("flag", "RST"),
-					zap.Object("port", pkt.srcPort))
+					zap.Any("port", pkt.srcPort))
 
 			}
 
@@ -602,7 +605,7 @@ func EchoTargets(
 	completeCycleUpload chan bool,
 	finishedCycleUpload *sync.WaitGroup,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	go func() {
 		for {
@@ -654,7 +657,7 @@ func echoTargetsWorker(
 	batchEndCycle *time.Ticker,
 	sentC chan Message,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	r := reflect.ValueOf(remotes)
@@ -713,7 +716,7 @@ func send(
 	ackNum uint32,
 	sentC chan Message,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 	var (
 		err        error
@@ -818,17 +821,17 @@ func send(
 				flag = ""
 			}
 
-			srcZap := zap.Nest("source",
-				zap.String("address", srcAddr.String()),
-				zap.Object("port", srcPort))
-			dstZap := zap.Nest("destination",
-				zap.String("address", dstAddr.String()),
-				zap.Object("port", targetPort))
+			lf := []zapcore.Field{
+				zap.String("flag", flag),
+				zap.String("src_address", srcAddr.String()),
+				zap.Any("src_port", srcPort),
+				zap.String("dst_address", dstAddr.String()),
+				zap.Any("dst_port", targetPort)}
 			if err != nil {
-				logger.Debug("failed to send out", zap.String("flag", flag), srcZap, dstZap)
+				logger.Debug("failed to send out", lf...)
 				break
 			}
-			logger.Debug("Sent", zap.String("flag", flag), srcZap, dstZap)
+			logger.Debug("Sent", lf...)
 
 			select {
 			case <-kill:

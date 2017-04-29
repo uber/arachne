@@ -27,8 +27,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/defines"
+	"go.uber.org/zap"
 )
 
 func TestReadConfig(t *testing.T) {

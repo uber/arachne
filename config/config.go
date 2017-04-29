@@ -34,11 +34,11 @@ import (
 	"time"
 
 	"github.com/jawher/mow.cli"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+	"go.uber.org/zap"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
 )
@@ -164,7 +164,7 @@ func localFileReadable(path string) error {
 }
 
 // ParseCliArgs provides the usage and help menu, and parses the actual arguments.
-func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig {
+func ParseCliArgs(logger *log.Logger, service string, version string) *CLIConfig {
 	args := new(CLIConfig)
 
 	app := cli.App(service, "Utility to echo the DC and Cloud Infrastructure")
@@ -187,19 +187,19 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 }
 
 // Get fetches the configuration file from local path.
-func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
+func Get(cf string, ec *Extended, logger *log.Logger) (*AppConfig, error) {
 
 	data, err := ioutil.ReadFile(cf)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := unmarshalBasicConfig(data, cf, logger)
+	b, err := unmarshalBasicConfig(data, cf)
 	if err != nil {
 		return nil, err
 	}
 
-	mc, err := ec.Metrics.UnmarshalConfig(data, cf, logger)
+	mc, err := ec.Metrics.UnmarshalConfig(data, cf)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 }
 
 // unmarshalBasicConfig fetches the configuration file from local path.
-func unmarshalBasicConfig(data []byte, fname string, logger zap.Logger) (*BasicConfig, error) {
+func unmarshalBasicConfig(data []byte, fname string) (*BasicConfig, error) {
 
 	cfg := new(BasicConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
@@ -243,7 +243,7 @@ func FetchRemoteList(
 	HTTPResponseHeaderTimeout time.Duration,
 	orchestratorRESTConf string,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	gl.RemoteConfig = new(RemoteConfig)
@@ -312,7 +312,7 @@ func createHTTPClient(timeout time.Duration, disableKeepAlives bool) *http.Clien
 }
 
 // GetHostname returns the hostname.
-func GetHostname(logger zap.Logger) (string, error) {
+func GetHostname(logger *log.Logger) (string, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		logger.Warn("Failed to extract hostname from OS", zap.Error(err))
@@ -330,7 +330,7 @@ func refreshRemoteList(
 	HTTPResponseHeaderTimeout time.Duration,
 	orchestratorRESTConf string,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	client := createHTTPClient(HTTPResponseHeaderTimeout, true)
@@ -387,7 +387,7 @@ func refreshRemoteList(
 func fetchRemoteListFromOrchestrator(
 	client *http.Client,
 	url string,
-	logger zap.Logger,
+	logger *log.Logger,
 ) (int, []byte, error) {
 
 	var bResp []byte
@@ -405,7 +405,7 @@ func fetchRemoteListFromOrchestrator(
 	}
 	defer resp.Body.Close()
 
-	logger = logger.With(zap.String("status_text", http.StatusText(resp.StatusCode)),
+	logger.Logger = logger.With(zap.String("status_text", http.StatusText(resp.StatusCode)),
 		zap.Int("status code", resp.StatusCode))
 
 	switch resp.StatusCode {
@@ -438,7 +438,7 @@ func readRemoteList(
 	remotes RemoteStore,
 	maxNumSrcTCPPorts uint16,
 	minBatchInterval time.Duration,
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 	c := new(RemoteFileConfig)
 
@@ -473,7 +473,7 @@ func readRemoteList(
 		}
 	}
 	glRC.SrcAddress = *srcIP
-	logger.Debug("Arachne agent's source IP address", zap.Object("address", glRC.SrcAddress))
+	logger.Debug("Arachne agent's source IP address", zap.Any("address", glRC.SrcAddress))
 
 	glRC.TargetTCPPort = c.Local.TargetTCPPort
 	if glRC.Timeout, err = time.ParseDuration(c.Local.Timeout); err != nil {
@@ -519,20 +519,20 @@ func readRemoteList(
 		glRC.DNSServersAlt = append(glRC.DNSServersAlt, currDNSIP)
 
 	}
-	logger.Debug("Alternate DNS servers configured", zap.Object("servers", glRC.DNSServersAlt))
+	logger.Debug("Alternate DNS servers configured", zap.Any("servers", glRC.DNSServersAlt))
 
 	walkTargets(glRC, c.Internal, false, remotes, logger)
 	walkTargets(glRC, c.External, true, remotes, logger)
 
 	for key, r := range remotes {
-		logger.Debug("Remote", zap.String("key", key), zap.Object("object", r))
+		logger.Debug("Remote", zap.String("key", key), zap.Any("object", r))
 	}
 
 	return nil
 }
 
 // Validate and create map of ipv4 and ipv6 addresses with string as their key.
-func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger zap.Logger) {
+func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger *log.Logger) {
 
 	for _, t := range ts {
 		if grc.ResolveDNS && t.HostName != "" {
@@ -569,7 +569,7 @@ func ResolveDnsTargets(
 	DNSRefresh *time.Ticker,
 	wg *sync.WaitGroup,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	go func() {
 		// Resolve

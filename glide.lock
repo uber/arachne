@@ -1,5 +1,5 @@
-hash: 8f281e3cbea09d51f8d74d087a229e3da3f8b89d4a2e2596cf68bdbbc98c7375
-updated: 2017-04-28T13:18:16.514998307-04:00
+hash: 6a4e1edc689f9c8d154c4d5b712167d8f7fb72e4d407c4239cf1dd42ee910723
+updated: 2017-04-28T13:47:14.636107674-07:00
 imports:
 - name: github.com/DataDog/datadog-go
   version: 909c02b65dd8a52e8fa6072db9752a112227cf21
@@ -19,12 +19,21 @@ imports:
   version: cdd56516a92a4dc680379a26524c9c3d59d79ec0
   subpackages:
   - _cgo
-- name: github.com/uber-go/atomic
-  version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber-go/zap
-  version: c064b5c44b285a7e2fd5c9b26e8c38228ce2bccb
+  version: 6a4e056f2cc954cfec3581729e758909604b3f76
 - name: github.com/uber/uber-licence
-  version: e35b7f99af2d110505bc81d8a9449dafaa326730
+  version: 26f31737ab642fca859c5ad83319077b01e1e5a5
+- name: go.uber.org/atomic
+  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+- name: go.uber.org/zap
+  version: 6a4e056f2cc954cfec3581729e758909604b3f76
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - internal/multierror
+  - zapcore
 - name: golang.org/x/sys
   version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
   subpackages:
