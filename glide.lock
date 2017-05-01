@@ -22,7 +22,7 @@ imports:
 - name: github.com/uber-go/zap
   version: 6a4e056f2cc954cfec3581729e758909604b3f76
 - name: github.com/uber/uber-licence
-  version: 26f31737ab642fca859c5ad83319077b01e1e5a5
+  version: e35b7f99af2d110505bc81d8a9449dafaa326730
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/zap
