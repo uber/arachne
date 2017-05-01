@@ -22,12 +22,13 @@ package config
 
 import (
 	"io/ioutil"
-	"os"
 	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/log"
+	"github.com/uber/arachne/internal/util"
 	"go.uber.org/zap"
 )
 
@@ -39,11 +40,12 @@ func TestReadConfig(t *testing.T) {
 		testConfigFilePath string
 	)
 
-	logger := zap.New(
-		zap.NewJSONEncoder(),
-		zap.InfoLevel,
-		zap.DiscardOutput,
-	)
+	l, _ := zap.NewDevelopment()
+	logger := &log.Logger{
+		Logger:    l,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	gl.RemoteConfig = new(RemoteConfig)
 	remotes := make(RemoteStore, defines.MaxNumRemoteTargets)
@@ -93,12 +95,12 @@ func TestDownloadTargetFileFromOrchestrator(t *testing.T) {
 
 	t.Parallel()
 
-	logger := zap.New(
-		zap.NewJSONEncoder(),
-		zap.InfoLevel,
-		zap.Output(os.Stdout),
-		zap.Output(os.Stderr),
-	)
+	l, _ := zap.NewDevelopment()
+	logger := &log.Logger{
+		Logger:    l,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	const timeout = defines.HTTPResponseHeaderTimeout
 	client := createHTTPClient(timeout, true)
