@@ -69,13 +69,13 @@ func CreateLogger(
 	bootstrapLogger *Logger,
 ) (*Logger, error) {
 
-	var output []string
+	output := []string{"stderr"}
+	if c.StdOut || foreground {
+		output = []string{"stdout"}
+	}
 	if c.LogSink != "" {
 		bootstrapLogger.Info("Log file path provided", zap.String("path", c.LogSink))
 		output = append(output, c.LogSink)
-		if c.StdOut || foreground {
-			output = append(output, "stdout")
-		}
 	}
 
 	initialFields := map[string]interface{}{
