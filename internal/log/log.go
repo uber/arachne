@@ -71,16 +71,11 @@ func CreateLogger(
 
 	var output []string
 	if c.LogSink != "" {
-		_, err := os.OpenFile(c.LogSink, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-		if err != nil {
-			return nil, err
-		}
 		bootstrapLogger.Info("Log file path provided", zap.String("path", c.LogSink))
+		output = append(output, c.LogSink)
 		if c.StdOut || foreground {
 			output = append(output, "stdout")
 		}
-		output = append(output, c.LogSink)
-
 	}
 
 	initialFields := map[string]interface{}{

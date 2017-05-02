@@ -500,16 +500,15 @@ func Receiver(
 			default:
 				logger.Fatal("unhandled AF family", zap.String("AF", af))
 			}
-			// TODO
-			//fromAddrStr := fromAddr.String()
-			//logger.Logger = logger.With(zap.String("address", fromAddrStr))
 
+			fromAddrStr := fromAddr.String()
 			switch {
 			case pkt.hasFlag(syn) && !pkt.hasFlag(ack):
 				// Received SYN (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN"),
-					zap.Any("port", pkt.dstPort))
+					zap.String("src_address", fromAddrStr),
+					zap.Any("dst_port", pkt.dstPort))
 
 				// Replying with SYN+ACK to Arachne agent
 				srcPortRange := PortRange{pkt.srcPort, pkt.srcPort}
@@ -525,7 +524,8 @@ func Receiver(
 				// Received SYN+ACK (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN ACK"),
-					zap.Any("port", pkt.srcPort))
+					zap.String("src_address", fromAddrStr),
+					zap.Any("dst_port", pkt.srcPort))
 
 				inMsg := Message{
 					Type:    EchoReply,
@@ -561,7 +561,8 @@ func Receiver(
 				// Received RST (closed port or reset from other side)
 				logger.Warn("Received",
 					zap.String("flag", "RST"),
-					zap.Any("port", pkt.srcPort))
+					zap.String("src_address", fromAddrStr),
+					zap.Any("dst_port", pkt.srcPort))
 
 			}
 
