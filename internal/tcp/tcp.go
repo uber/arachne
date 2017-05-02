@@ -508,7 +508,7 @@ func Receiver(
 				logger.Debug("Received",
 					zap.String("flag", "SYN"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("dst_port", pkt.dstPort))
+					zap.Any("src_port", pkt.srcPort))
 
 				// Replying with SYN+ACK to Arachne agent
 				srcPortRange := PortRange{pkt.srcPort, pkt.srcPort}
@@ -525,7 +525,7 @@ func Receiver(
 				logger.Debug("Received",
 					zap.String("flag", "SYN ACK"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("dst_port", pkt.srcPort))
+					zap.Any("src_port", pkt.srcPort))
 
 				inMsg := Message{
 					Type:    EchoReply,
@@ -562,7 +562,7 @@ func Receiver(
 				logger.Warn("Received",
 					zap.String("flag", "RST"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("dst_port", pkt.srcPort))
+					zap.Any("src_port", pkt.srcPort))
 
 			}
 
