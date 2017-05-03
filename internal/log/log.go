@@ -21,10 +21,11 @@
 package log
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -59,50 +60,11 @@ type Config struct {
 }
 
 // CreateLogger creates a zap logger.
-func CreateLogger(
-	c *Config,
-	service string,
-	hostname string,
-	pidPath string,
-	removePIDfunc removePIDfunc,
-	foreground bool,
-	bootstrapLogger *Logger,
-) (*Logger, error) {
+func CreateLogger(c *zap.Config, pidPath string, removePIDfunc removePIDfunc) (*Logger, error) {
 
-	output := []string{"stderr"}
-	if c.StdOut || foreground {
-		output = []string{"stdout"}
-	}
-	if c.LogSink != "" {
-		bootstrapLogger.Info("Log file path provided", zap.String("path", c.LogSink))
-		output = append(output, c.LogSink)
-	}
-
-	initialFields := map[string]interface{}{
-		"service_name": service,
-		"hostname":     hostname,
-		"PID":          os.Getpid(),
-	}
-
-	var level zapcore.Level
-	if err := level.Set(c.Level); err != nil {
-		bootstrapLogger.Error("Log level provided", zap.Error(err))
-	}
-
-	config := zap.Config{
-		Level:            zap.NewAtomicLevelAt(level),
-		Development:      false,
-		DisableCaller:    true,
-		EncoderConfig:    zap.NewProductionEncoderConfig(),
-		Encoding:         "json",
-		ErrorOutputPaths: []string{"stdout"},
-		OutputPaths:      output,
-		InitialFields:    initialFields,
-	}
-
-	l, err := config.Build()
+	l, err := c.Build()
 	if err != nil {
-		return nil, errors.New("failed to create logger")
+		return nil, errors.Wrap(err, "failed to create logger")
 	}
 	pl := Logger{
 		Logger:    l,
@@ -113,45 +75,64 @@ func CreateLogger(
 	return &pl, nil
 }
 
-// ResetLogFile keeps the last 'LogFileSizeKeepKB' KB of the log file if the size of the log file
+// ResetLogFiles keeps the last 'LogFileSizeKeepKB' KB of the log file if the size of the log file
 // has exceeded 'LogFileSizeMaxMB' MB within the last 'PollOrchestratorIntervalSuccess' hours.
-func ResetLogFile(logFilePath string, fileSizeMaxMB int, fileSizeKeepKB int, logger *Logger) error {
-	file, err := os.Open(logFilePath)
-	if err != nil {
-		logger.Error("failed to open existing log file", zap.String("file", logFilePath), zap.Error(err))
-		return err
-	}
-	defer file.Close()
+func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger *Logger) error {
 
-	// Get the file size
-	stat, err := file.Stat()
-	if err != nil {
-		logger.Error("failed to read the FileInfo structure of the log file",
-			zap.String("file", logFilePath),
-			zap.Error(err))
-		return err
-	}
-	fileSize := int(stat.Size())
+	var errs error
 
-	if fileSize > fileSizeMaxMB*1024*1024 {
-		logger.Debug("Size of log file is larger than maximum allowed. Resetting.",
-			zap.String("file", logFilePath),
-			zap.Int("current_size_MB", fileSize),
-			zap.Int("maximum_allowed_size_MB", fileSizeMaxMB))
-
-		buf := make([]byte, fileSizeKeepKB*1024)
-		start := stat.Size() - int64(fileSizeKeepKB*1024)
-		if _, err = file.ReadAt(buf, start); err != nil {
-			logger.Error("failed to read existing log file",
-				zap.String("file", logFilePath),
+	for _, path := range paths {
+		switch path {
+		case "stdout":
+			continue
+		case "stderr":
+			continue
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			logger.Error("failed to open existing log file",
+				zap.String("file", path),
 				zap.Error(err))
-			return err
+			errs = multierror.Append(errs, err)
+			continue
 		}
-		if err = ioutil.WriteFile(logFilePath, buf, 0644); err != nil {
-			logger.Error("failed to reset log file", zap.String("file", logFilePath), zap.Error(err))
-			return err
+		defer file.Close()
+
+		// Get the file size
+		stat, err := file.Stat()
+		if err != nil {
+			logger.Error("failed to read the FileInfo structure of the log file",
+				zap.String("file", path),
+				zap.Error(err))
+			errs = multierror.Append(errs, err)
+			continue
+		}
+		fileSize := int(stat.Size())
+
+		if fileSize > fileSizeMaxMB*1024*1024 {
+			logger.Debug("Size of log file is larger than maximum allowed. Resetting.",
+				zap.String("file", path),
+				zap.Int("current_size_MB", fileSize),
+				zap.Int("maximum_allowed_size_MB", fileSizeMaxMB))
+
+			buf := make([]byte, fileSizeKeepKB*1024)
+			start := stat.Size() - int64(fileSizeKeepKB*1024)
+			if _, err = file.ReadAt(buf, start); err != nil {
+				logger.Error("failed to read existing log file",
+					zap.String("file", path),
+					zap.Error(err))
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			if err = ioutil.WriteFile(path, buf, 0644); err != nil {
+				logger.Error("failed to reset log file",
+					zap.String("file", path),
+					zap.Error(err))
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		}
 	}
 
-	return nil
+	return errs
 }

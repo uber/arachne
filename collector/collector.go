@@ -27,12 +27,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -316,8 +317,8 @@ func batchWorker(
 
 			if in.Ack != probe.Seq+1 {
 				logger.Warn("unmatched ACK",
-					zap.Any("in_ACK", in.Ack),
-					zap.Any("out_SEQ", probe.Seq),
+					zap.Uint32("in_ACK", in.Ack),
+					zap.Uint32("out_SEQ", probe.Seq),
 					zap.String("source_address", in.SrcAddr.String()))
 				continue
 			}
@@ -451,7 +452,7 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger)
 		logger.Info("Arachne -- Table of Results",
 			zap.String("version", defines.ArachneVersion),
 			zap.String("hostname", gl.RemoteConfig.HostName),
-			zap.Any("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
+			zap.Uint16("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
 			zap.String("QoS_DSCP", currentDSCP),
 		)
 	}
@@ -515,9 +516,9 @@ func printTableEntry(
 	if !foreground {
 		logger.Info("Result",
 			zap.String("host", targetHost),
-			zap.Int("source_port", int(srcPort)),
-			zap.Any("two_way_latency", twoWay),
-			zap.Any("one_way_latency", oneWay),
+			zap.Uint16("source_port", srcPort),
+			twoWay,
+			oneWay,
 			zap.String("timed_out", timedOut))
 	}
 }

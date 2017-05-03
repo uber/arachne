@@ -1,5 +1,5 @@
-hash: a7c24d7197fcb4737e91fd924bdd340f9d8fbe916077f24eb32207d335ec65fd
-updated: 2017-05-02T21:20:16.046292225Z
+hash: 4f17a9f10020851ad3355548b6f3d125830ed849ca9662e19d3fba1a95e684fd
+updated: 2017-05-03T21:39:27.8266638Z
 imports:
 - name: github.com/DataDog/datadog-go
   version: 909c02b65dd8a52e8fa6072db9752a112227cf21
@@ -7,6 +7,10 @@ imports:
   - statsd
 - name: github.com/fatih/color
   version: dea9d3a26a087187530244679c1cfb3a42937794
+- name: github.com/hashicorp/errwrap
+  version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
+- name: github.com/hashicorp/go-multierror
+  version: ed905158d87462226a13fe39ddf685ea65f1c11f
 - name: github.com/jawher/mow.cli
   version: 772320464101e904cd51198160eb4d489be9cc49
 - name: github.com/mattn/go-colorable
@@ -15,12 +19,16 @@ imports:
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/miekg/dns
   version: 5d001d020961ae1c184f9f8152fdc73810481677
+- name: github.com/pkg/errors
+  version: ff09b135c25aae272398c51a07235b90a75aa4f0
 - name: github.com/spacemonkeygo/monotime
   version: cdd56516a92a4dc680379a26524c9c3d59d79ec0
   subpackages:
   - _cgo
 - name: github.com/uber-go/zap
   version: 6a4e056f2cc954cfec3581729e758909604b3f76
+  subpackages:
+  - zapcore
 - name: github.com/uber/uber-licence
   version: e35b7f99af2d110505bc81d8a9449dafaa326730
 - name: go.uber.org/atomic

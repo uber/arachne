@@ -22,7 +22,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -33,17 +32,27 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jawher/mow.cli"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/jawher/mow.cli"
+	"github.com/pkg/errors"
+	"github.com/uber/arachne/defines"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
 )
 
 const defaultConfigFile = "/etc/arachne/arachne.yaml"
+
+// BasicConfig holds the basic parameter configurations for the application.
+type BasicConfig struct {
+	Logging log.Config           `yaml:"logging"`
+	Arachne ArachneConfiguration `yaml:"arachne"`
+}
 
 // ArachneConfiguration contains specific configuration to Arachne.
 type ArachneConfiguration struct {
@@ -57,12 +66,6 @@ type OrchestratorConfig struct {
 	Enabled     bool   `yaml:"enabled"`
 	AddrPort    string `yaml:"addrport"`
 	RESTVersion string `yaml:"restVersion"`
-}
-
-// BasicConfig holds the basic parameter configurations for the application.
-type BasicConfig struct {
-	Logging log.Config           `yaml:"logging"`
-	Arachne ArachneConfiguration `yaml:"arachne"`
 }
 
 // Extended holds the parameter configurations implemented by outside callers.
@@ -110,7 +113,7 @@ type RemoteFileConfig struct {
 
 // AppConfig holds the info parsed from the local YAML config file.
 type AppConfig struct {
-	Logging                log.Config
+	Logging                *zap.Config
 	Verbose                bool
 	PIDPath                string
 	Orchestrator           OrchestratorConfig
@@ -187,25 +190,57 @@ func ParseCliArgs(logger *log.Logger, service string, version string) *CLIConfig
 }
 
 // Get fetches the configuration file from local path.
-func Get(cf string, ec *Extended, logger *log.Logger) (*AppConfig, error) {
+func Get(cc *CLIConfig, ec *Extended, logger *log.Logger) (*AppConfig, error) {
 
-	data, err := ioutil.ReadFile(cf)
+	data, err := ioutil.ReadFile(*cc.ConfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := unmarshalBasicConfig(data, cf)
+	b, err := unmarshalBasicConfig(data, *cc.ConfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	mc, err := ec.Metrics.UnmarshalConfig(data, cf)
+	mc, err := ec.Metrics.UnmarshalConfig(data, *cc.ConfigFile)
 	if err != nil {
 		return nil, err
+	}
+
+	output := []string{"stderr"}
+	if b.Logging.StdOut || *cc.Foreground {
+		output = []string{"stdout"}
+	}
+	if b.Logging.LogSink != "" {
+		logger.Info("Log file path provided", zap.String("path", b.Logging.LogSink))
+		output = append(output, b.Logging.LogSink)
+	}
+
+	osHostname, _ := GetHostname(logger)
+	initialFields := map[string]interface{}{
+		"service_name": defines.ArachneService,
+		"hostname":     osHostname,
+		"PID":          os.Getpid(),
+	}
+
+	var level zapcore.Level
+	if err := level.Set(b.Logging.Level); err != nil {
+		logger.Error("Log level provided", zap.Error(err))
+	}
+
+	zc := zap.Config{
+		Level:            zap.NewAtomicLevelAt(level),
+		Development:      false,
+		DisableCaller:    true,
+		EncoderConfig:    zap.NewProductionEncoderConfig(),
+		Encoding:         "json",
+		ErrorOutputPaths: []string{"stdout"},
+		OutputPaths:      output,
+		InitialFields:    initialFields,
 	}
 
 	cfg := AppConfig{
-		Logging:                b.Logging,
+		Logging:                &zc,
 		PIDPath:                b.Arachne.PIDPath,
 		Orchestrator:           b.Arachne.Orchestrator,
 		StandaloneTargetConfig: b.Arachne.StandaloneTargetConfig,

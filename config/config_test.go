@@ -22,13 +22,15 @@ package config
 
 import (
 	"io/ioutil"
+	coreLog "log"
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/util"
+
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +42,10 @@ func TestReadConfig(t *testing.T) {
 		testConfigFilePath string
 	)
 
-	l, _ := zap.NewDevelopment()
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		coreLog.Fatal(err)
+	}
 	logger := &log.Logger{
 		Logger:    l,
 		PIDPath:   "",
@@ -95,7 +100,10 @@ func TestDownloadTargetFileFromOrchestrator(t *testing.T) {
 
 	t.Parallel()
 
-	l, _ := zap.NewDevelopment()
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		coreLog.Fatal(err)
+	}
 	logger := &log.Logger{
 		Logger:    l,
 		PIDPath:   "",

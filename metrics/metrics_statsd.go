@@ -24,8 +24,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/uber/arachne/internal/log"
+
+	"github.com/DataDog/datadog-go/statsd"
 	"go.uber.org/zap"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
@@ -94,7 +95,7 @@ func (c StatsdConfig) NewReporter(logger *log.Logger) (Reporter, error) {
 	}
 	// add service as prefix
 	s.Namespace = fmt.Sprintf("%s.", "arachne")
-	logger.Info("Statsd Metrics configuration", zap.Any("object", fmt.Sprintf("%+v", s)))
+	logger.Info("Statsd Metrics configuration", zap.String("object", fmt.Sprintf("%+v", s)))
 
 	return &statsdReporter{client: s}, nil
 }

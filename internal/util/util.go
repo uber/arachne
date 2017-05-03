@@ -31,9 +31,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/fatih/color"
 	"go.uber.org/zap"
 )
 

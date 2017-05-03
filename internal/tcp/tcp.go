@@ -31,9 +31,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spacemonkeygo/monotime"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
+
+	"github.com/spacemonkeygo/monotime"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -508,7 +509,7 @@ func Receiver(
 				logger.Debug("Received",
 					zap.String("flag", "SYN"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("src_port", pkt.srcPort))
+					zap.Uint16("src_port", pkt.srcPort))
 
 				// Replying with SYN+ACK to Arachne agent
 				srcPortRange := PortRange{pkt.srcPort, pkt.srcPort}
@@ -525,7 +526,7 @@ func Receiver(
 				logger.Debug("Received",
 					zap.String("flag", "SYN ACK"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("src_port", pkt.srcPort))
+					zap.Uint16("src_port", pkt.srcPort))
 
 				inMsg := Message{
 					Type:    EchoReply,
@@ -562,7 +563,7 @@ func Receiver(
 				logger.Warn("Received",
 					zap.String("flag", "RST"),
 					zap.String("src_address", fromAddrStr),
-					zap.Any("src_port", pkt.srcPort))
+					zap.Uint16("src_port", pkt.srcPort))
 
 			}
 
@@ -825,9 +826,9 @@ func send(
 			lf := []zapcore.Field{
 				zap.String("flag", flag),
 				zap.String("src_address", srcAddr.String()),
-				zap.Any("src_port", srcPort),
+				zap.Uint16("src_port", srcPort),
 				zap.String("dst_address", dstAddr.String()),
-				zap.Any("dst_port", targetPort)}
+				zap.Uint16("dst_port", targetPort)}
 			if err != nil {
 				logger.Debug("failed to send out", lf...)
 				break

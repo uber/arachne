@@ -25,8 +25,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/miekg/dns"
 	"github.com/uber/arachne/internal/log"
+
+	"github.com/miekg/dns"
 	"go.uber.org/zap"
 )
 
