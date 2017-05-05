@@ -34,6 +34,7 @@ import (
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 
+	"github.com/pkg/errors"
 	"github.com/spacemonkeygo/monotime"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -380,7 +381,7 @@ func checksum(af string, data []byte, srcip, dstip *net.IP) (uint16, error) {
 			6, // protocol number for TCP
 		}...)
 	default:
-		return 0, fmt.Errorf("unhandled AF family")
+		return 0, errors.New("unhandled AF family")
 	}
 
 	body := make([]byte, 0, len(pseudoHeader)+len(data))
@@ -441,14 +442,14 @@ func Receiver(
 		// no IPv6 header present on TCP packets received on the raw socket
 		ipHdrSize = 0
 	default:
-		return fmt.Errorf("unhandled AF family")
+		return errors.New("unhandled AF family")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to create %s receive socket: %s", af, err)
+		return errors.Wrapf(err, "failed to create %s receive socket", af)
 	}
 
 	if err := bindToDevice(recvSocket, interfaceName); err != nil {
-		return fmt.Errorf("failed to bind %s receive socket to interface %s: %s", af, interfaceName, err)
+		return errors.Wrapf(err, "failed to bind %s receive socket to interface %s", af, interfaceName)
 	}
 
 	// IP + TCP header, this channel is fed from the socket
@@ -613,7 +614,6 @@ func EchoTargets(
 		for {
 			for i := range GetDSCP {
 				t0 := time.Now()
-
 				if !QoSEnabled {
 					*currentDSCP = GetDSCP[0]
 				} else {
@@ -640,7 +640,7 @@ func EchoTargets(
 						continue
 					}
 					t1 := time.Now()
-					logger.Debug("Completed echoing current batch cycle in",
+					logger.Debug("Completed echoing current batch cycle",
 						zap.String("duration", t1.Sub(t0).String()))
 					continue
 				}
@@ -665,7 +665,7 @@ func echoTargetsWorker(
 	r := reflect.ValueOf(remotes)
 
 	if r.Kind() != reflect.Map {
-		return fmt.Errorf("remote interface not a map in echoTargetsWorker()")
+		return errors.New("remote interface not a map in echoTargetsWorker()")
 	}
 
 	// Echo interval is half the time of the 'real' batch interval
@@ -675,7 +675,7 @@ func echoTargetsWorker(
 	for _, key := range r.MapKeys() {
 		remoteStruct := r.MapIndex(key)
 		if remoteStruct.Kind() != reflect.Struct {
-			return fmt.Errorf("remote field not a struct in tcp.EchoTargets()")
+			return errors.New("remote field not a struct in tcp.EchoTargets()")
 		}
 		dstAddr := net.IP(remoteStruct.FieldByName("IP").Bytes())
 		ext := remoteStruct.FieldByName("External").Bool()
@@ -690,7 +690,7 @@ func echoTargetsWorker(
 		err := send(remoteStruct.FieldByName("AF").String(), srcAddr, &dstAddr, port, srcPortRange, qos,
 			syn, rand.Uint32(), 0, sentC, kill, logger)
 		if err != nil {
-			return fmt.Errorf("%s", err)
+			return err
 		}
 
 		select {
@@ -721,6 +721,7 @@ func send(
 	logger *log.Logger,
 ) error {
 	var (
+		flag       string
 		err        error
 		sendSocket int
 	)
@@ -732,7 +733,7 @@ func send(
 	case "ip6":
 		sendSocket, err = syscall.Socket(syscall.AF_INET6, syscall.SOCK_RAW, syscall.IPPROTO_TCP)
 	default:
-		return fmt.Errorf("unhandled AF family")
+		return errors.New("unhandled AF family")
 	}
 	if err != nil {
 		return err
@@ -749,7 +750,8 @@ func send(
 		copy(sockaddr[:], srcAddr.To16())
 		err = syscall.Bind(sendSocket, &syscall.SockaddrInet6{Port: 0, Addr: sockaddr})
 	default:
-		return fmt.Errorf("unhandled AF family")
+
+		return errors.New("unhandled AF family")
 	}
 	if err != nil {
 		return err
@@ -766,14 +768,29 @@ func send(
 		return err
 	}
 
+	switch {
+	case (ctrlFlags&syn != 0) && (ctrlFlags&ack == 0):
+		flag = "SYN"
+	case ctrlFlags&syn != 0 && (ctrlFlags&ack != 0):
+		flag = "SYN ACK"
+	case ctrlFlags&rst != 0:
+		flag = "RST"
+	default:
+		flag = ""
+	}
+
 	go func() {
 		defer syscall.Close(sendSocket)
 
-		var flag string
-
 		rand.Seed(time.Now().UnixNano())
 		for srcPort := srcPortRange[0]; srcPort <= srcPortRange[1]; srcPort++ {
-			var lf []zapcore.Field
+
+			zf := []zapcore.Field{
+				zap.String("flag", flag),
+				zap.String("src_address", srcAddr.String()),
+				zap.Uint16("src_port", srcPort),
+				zap.String("dst_address", dstAddr.String()),
+				zap.Uint16("dst_port", targetPort)}
 
 			packet, err := makePkt(af, srcAddr, dstAddr, srcPort, targetPort, ctrlFlags, seqNum, ackNum)
 			if err != nil {
@@ -797,44 +814,26 @@ func send(
 				logger.Fatal("unhandled AF family", zap.String("AF", af))
 			}
 
-			switch {
-			case (ctrlFlags&syn != 0) && (ctrlFlags&ack == 0):
-				flag = "SYN"
-				sendRunTime := monoNow()
-				sendUnixTime := timeNow()
-
-				// Send 'echo' request message to collector
-				sentC <- Message{
-					Type:    EchoRequest,
-					SrcAddr: *srcAddr,
-					DstAddr: *dstAddr,
-					Af:      af,
-					SrcPort: srcPort,
-					QosDSCP: DSCPv,
-					Ts: Timestamp{
-						Run:  sendRunTime,
-						Unix: sendUnixTime},
-					Seq: seqNum,
-					Ack: ackNum,
+			if err == nil {
+				logger.Debug("Sent", zf...)
+				if flag == "SYN" {
+					// Send 'echo' request message to collector
+					sentC <- Message{
+						Type:    EchoRequest,
+						SrcAddr: *srcAddr,
+						DstAddr: *dstAddr,
+						Af:      af,
+						SrcPort: srcPort,
+						QosDSCP: DSCPv,
+						Ts: Timestamp{
+							Run:  monoNow(),
+							Unix: timeNow()},
+						Seq: seqNum,
+						Ack: ackNum,
+					}
 				}
-			case ctrlFlags&syn != 0 && (ctrlFlags&ack != 0):
-				flag = "SYN ACK"
-			case ctrlFlags&rst != 0:
-				flag = "RST"
-			default:
-				flag = ""
-			}
-
-			lf = []zapcore.Field{
-				zap.String("flag", flag),
-				zap.String("src_address", srcAddr.String()),
-				zap.Uint16("src_port", srcPort),
-				zap.String("dst_address", dstAddr.String()),
-				zap.Uint16("dst_port", targetPort)}
-			if err != nil {
-				logger.Error("failed to send out", lf...)
 			} else {
-				logger.Debug("Sent", lf...)
+				logger.Error("failed to send out", zf...)
 			}
 
 		cont:

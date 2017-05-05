@@ -27,6 +27,7 @@ import (
 	"github.com/uber/arachne/internal/log"
 
 	"github.com/DataDog/datadog-go/statsd"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
@@ -75,13 +76,13 @@ func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string) (Config, erro
 
 	cfg := new(StatsdConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshaling the statsd section in the configuration file %s: %v",
-			fname, err)
+		return nil, errors.Wrapf(err, "error unmarshaling the statsd section in the "+
+			"configuration file %s", fname)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid info in the statsd section in the configuration file %s: %v",
-			fname, err)
+		return nil, errors.Wrapf(err, "invalid info in the statsd section in the "+
+			"configuration file %s", fname)
 	}
 
 	return Config(cfg), nil

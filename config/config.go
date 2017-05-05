@@ -259,11 +259,11 @@ func unmarshalBasicConfig(data []byte, fname string) (*BasicConfig, error) {
 
 	cfg := new(BasicConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshaling the configuration file %s: %v", fname, err)
+		return nil, errors.Wrapf(err, "error unmarshaling the configuration file %s", fname)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid info in configuration file %s: %v", fname, err)
+		return nil, errors.Wrapf(err, "invalid info in configuration file %s", fname)
 	}
 
 	return cfg, nil
@@ -299,7 +299,7 @@ func FetchRemoteList(
 
 		raw, err := ioutil.ReadFile(gl.App.StandaloneTargetConfig)
 		if err != nil {
-			return fmt.Errorf("file error: %v", err)
+			return errors.Wrap(err, "file error")
 		}
 		if err := readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts, minBatchInterval,
 			logger); err != nil {
@@ -413,7 +413,7 @@ func refreshRemoteList(
 		case <-kill:
 			confRetry.Stop()
 			logger.Debug("Requested to exit while trying to fetch configuration file.")
-			return fmt.Errorf("received SIG")
+			return errors.New("received SIG")
 		}
 	}
 
@@ -441,20 +441,20 @@ func fetchRemoteListFromOrchestrator(
 	defer resp.Body.Close()
 
 	logger.Logger = logger.With(zap.String("status_text", http.StatusText(resp.StatusCode)),
-		zap.Int("status code", resp.StatusCode))
+		zap.Int("status_code", resp.StatusCode))
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 		logger.Debug("HTTP response status code from Orchestrator")
 		bResp, err = ioutil.ReadAll(resp.Body)
 	case http.StatusNotFound:
-		err = fmt.Errorf("HTTP response from Orchestrator: 'Idle mode'")
+		err = errors.New("HTTP response from Orchestrator: 'Idle mode'")
 	case http.StatusBadRequest:
-		err = fmt.Errorf("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
+		err = errors.New("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
 	case http.StatusInternalServerError:
 		logger.Warn("HTTP response from Orchestrator: Error opening requested configuration file")
 	default:
-		err = fmt.Errorf("unhandled HTTP response from Orchestrator")
+		err = errors.New("unhandled HTTP response from Orchestrator")
 	}
 
 	return resp.StatusCode, bResp, err
@@ -478,7 +478,7 @@ func readRemoteList(
 	c := new(RemoteFileConfig)
 
 	if err := json.Unmarshal(raw, c); err != nil {
-		return fmt.Errorf("configuration file parse error (%v)", err)
+		return errors.Wrap(err, "configuration file parse error")
 	}
 
 	// Populate global variables
@@ -504,7 +504,7 @@ func readRemoteList(
 		srcIP, err = network.GetSourceAddr("ip6", strings.ToLower(c.Local.SrcAddress),
 			glRC.HostName, glRC.InterfaceName, logger)
 		if err != nil {
-			return fmt.Errorf("could not retrieve an IPv4 or IPv6 source address (%v)", err)
+			return errors.Wrap(err, "could not retrieve an IPv4 or IPv6 source address")
 		}
 	}
 	glRC.SrcAddress = *srcIP
@@ -512,33 +512,33 @@ func readRemoteList(
 
 	glRC.TargetTCPPort = c.Local.TargetTCPPort
 	if glRC.Timeout, err = time.ParseDuration(c.Local.Timeout); err != nil {
-		return fmt.Errorf("failed to parse the timeout (%v)", err)
+		return errors.Wrap(err, "failed to parse the timeout")
 	}
 	glRC.SrcTCPPortRange[0] = c.Local.BaseSrcTCPPort
 	if c.Local.NumSrcTCPPorts > maxNumSrcTCPPorts {
-		return fmt.Errorf("not more than %d ephemeral source TCP ports may be used", maxNumSrcTCPPorts)
+		return errors.Errorf("not more than %d ephemeral source TCP ports may be used", maxNumSrcTCPPorts)
 	}
 	if c.Local.NumSrcTCPPorts == 0 {
-		return fmt.Errorf("cannot specify zero source TCP ports")
+		return errors.New("cannot specify zero source TCP ports")
 	}
 	glRC.SrcTCPPortRange[1] = c.Local.BaseSrcTCPPort + c.Local.NumSrcTCPPorts - 1
 	if glRC.SrcTCPPortRange.Contains(glRC.TargetTCPPort) {
-		return fmt.Errorf("the listen TCP port cannot reside in the range of the ephemeral TCP "+
+		return errors.Errorf("the listen TCP port cannot reside in the range of the ephemeral TCP "+
 			"source ports [%d-%d]", glRC.SrcTCPPortRange[0], glRC.SrcTCPPortRange[1])
 	}
 	if glRC.BatchInterval, err = time.ParseDuration(c.Local.BatchInterval); err != nil {
-		return fmt.Errorf("failed to parse the batch interval (%v)", err)
+		return errors.Wrap(err, "failed to parse the batch interval")
 	}
 	if glRC.BatchInterval < minBatchInterval {
-		return fmt.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
+		return errors.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
 	}
 	if glRC.PollOrchestratorInterval.Success, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalSuccess); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for success (%v)", err)
+		return errors.Wrap(err, "failed to parse the Orchestrator poll interval for success")
 	}
 	if glRC.PollOrchestratorInterval.Failure, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalFailure); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for failure (%v)", err)
+		return errors.Wrap(err, "failed to parse the Orchestrator poll interval for failure")
 	}
 
 	glRC.QoSEnabled = isTrue(c.Local.QoSEnabled)
@@ -548,8 +548,8 @@ func readRemoteList(
 	for _, server := range DNSInput {
 		currDNSIP := net.ParseIP(strings.TrimSpace(server))
 		if currDNSIP == nil {
-			return fmt.Errorf("configuration file parse error: invalid IP address for DNS server: %v",
-				currDNSIP)
+			return errors.Errorf("configuration file parse error: "+
+				"invalid IP address for DNS server: %v", currDNSIP)
 		}
 		glRC.DNSServersAlt = append(glRC.DNSServersAlt, currDNSIP)
 

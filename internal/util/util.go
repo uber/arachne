@@ -22,7 +22,6 @@ package util
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/arachne/metrics"
 
 	"github.com/fatih/color"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -139,7 +139,7 @@ func CheckPID(fname string, logger *log.Logger) error {
 		logger.Error("Arachne already running and different from self PID",
 			zap.Int("other_PID", readPID),
 			zap.Int("self_PID", os.Getpid()))
-		return fmt.Errorf("Arachne already running and different from self PID")
+		return errors.New("Arachne already running and different from self PID")
 	}
 	return savePID(fname, os.Getpid(), logger)
 }

@@ -21,13 +21,13 @@
 package network
 
 import (
-	"fmt"
 	"net"
 	"strings"
 
 	"github.com/uber/arachne/internal/log"
 
 	"github.com/miekg/dns"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -96,7 +96,7 @@ func ResolveIP(ip string, servers []net.IP, logger *log.Logger) (string, error) 
 func resolveIPwServer(ip string, servers []net.IP, logger *log.Logger) (string, error) {
 
 	if servers == nil {
-		return "", fmt.Errorf("no alternate DNS servers configured")
+		return "", errors.New("no alternate DNS servers configured")
 	}
 
 	c := dns.Client{}
@@ -123,18 +123,18 @@ func resolveIPwServer(ip string, servers []net.IP, logger *log.Logger) (string, 
 	}
 
 	logger.Warn("failed to DNS resolve IP with alternate servers", zap.String("ip", ip))
-	return "", fmt.Errorf("failed to DNS resolve %s with alternate servers", ip)
+	return "", errors.Errorf("failed to DNS resolve %s with alternate servers", ip)
 }
 
 func interfaceAddress(af string, name string) (*net.IP, error) {
 	iface, err := net.InterfaceByName(name)
 	if err != nil {
-		return nil, fmt.Errorf("net.InterfaceByName for %s: %s", name, err)
+		return nil, errors.Wrapf(err, "net.InterfaceByName for %s", name)
 	}
 
 	addrs, err := iface.Addrs()
 	if err != nil {
-		return nil, fmt.Errorf("iface.Addrs: %s", err)
+		return nil, errors.Wrap(err, "iface.Addrs")
 	}
 
 	return findAddrInRange(af, addrs)
@@ -143,7 +143,7 @@ func interfaceAddress(af string, name string) (*net.IP, error) {
 func anyInterfaceAddress(af string) (*net.IP, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return nil, fmt.Errorf("net.Interfaces: %s", err)
+		return nil, errors.Wrap(err, "net.Interfaces")
 	}
 
 	for _, iface := range interfaces {
@@ -154,7 +154,7 @@ func anyInterfaceAddress(af string) (*net.IP, error) {
 		addrs, err := iface.Addrs()
 		// Skip if error getting addresses
 		if err != nil {
-			return nil, fmt.Errorf("error getting addresses for interface %s: %s", iface.Name, err)
+			return nil, errors.Wrapf(err, "error getting addresses for interface %s", iface.Name)
 		}
 
 		if len(addrs) > 0 {
@@ -175,5 +175,5 @@ func findAddrInRange(af string, addrs []net.Addr) (*net.IP, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("could not find a source address in %s address family", af)
+	return nil, errors.Errorf("could not find a source address in %s address family", af)
 }
