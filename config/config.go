@@ -22,7 +22,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -33,17 +32,27 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jawher/mow.cli"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/jawher/mow.cli"
+	"github.com/pkg/errors"
+	"github.com/uber/arachne/defines"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
 )
 
 const defaultConfigFile = "/etc/arachne/arachne.yaml"
+
+// BasicConfig holds the basic parameter configurations for the application.
+type BasicConfig struct {
+	Logging log.Config           `yaml:"logging"`
+	Arachne ArachneConfiguration `yaml:"arachne"`
+}
 
 // ArachneConfiguration contains specific configuration to Arachne.
 type ArachneConfiguration struct {
@@ -57,12 +66,6 @@ type OrchestratorConfig struct {
 	Enabled     bool   `yaml:"enabled"`
 	AddrPort    string `yaml:"addrport"`
 	RESTVersion string `yaml:"restVersion"`
-}
-
-// BasicConfig holds the basic parameter configurations for the application.
-type BasicConfig struct {
-	Logging log.Config           `yaml:"logging"`
-	Arachne ArachneConfiguration `yaml:"arachne"`
 }
 
 // Extended holds the parameter configurations implemented by outside callers.
@@ -110,7 +113,7 @@ type RemoteFileConfig struct {
 
 // AppConfig holds the info parsed from the local YAML config file.
 type AppConfig struct {
-	Logging                log.Config
+	Logging                *zap.Config
 	Verbose                bool
 	PIDPath                string
 	Orchestrator           OrchestratorConfig
@@ -164,7 +167,7 @@ func localFileReadable(path string) error {
 }
 
 // ParseCliArgs provides the usage and help menu, and parses the actual arguments.
-func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig {
+func ParseCliArgs(logger *log.Logger, service string, version string) *CLIConfig {
 	args := new(CLIConfig)
 
 	app := cli.App(service, "Utility to echo the DC and Cloud Infrastructure")
@@ -187,25 +190,57 @@ func ParseCliArgs(logger zap.Logger, service string, version string) *CLIConfig 
 }
 
 // Get fetches the configuration file from local path.
-func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
+func Get(cc *CLIConfig, ec *Extended, logger *log.Logger) (*AppConfig, error) {
 
-	data, err := ioutil.ReadFile(cf)
+	data, err := ioutil.ReadFile(*cc.ConfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := unmarshalBasicConfig(data, cf, logger)
+	b, err := unmarshalBasicConfig(data, *cc.ConfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	mc, err := ec.Metrics.UnmarshalConfig(data, cf, logger)
+	mc, err := ec.Metrics.UnmarshalConfig(data, *cc.ConfigFile)
 	if err != nil {
 		return nil, err
+	}
+
+	output := []string{"stderr"}
+	if b.Logging.StdOut || *cc.Foreground {
+		output = []string{"stdout"}
+	}
+	if b.Logging.LogSink != "" {
+		logger.Info("Log file path provided", zap.String("path", b.Logging.LogSink))
+		output = append(output, b.Logging.LogSink)
+	}
+
+	osHostname, _ := GetHostname(logger)
+	initialFields := map[string]interface{}{
+		"service_name": defines.ArachneService,
+		"hostname":     osHostname,
+		"PID":          os.Getpid(),
+	}
+
+	var level zapcore.Level
+	if err := level.Set(b.Logging.Level); err != nil {
+		logger.Error("Log level provided", zap.Error(err))
+	}
+
+	zc := zap.Config{
+		Level:            zap.NewAtomicLevelAt(level),
+		Development:      false,
+		DisableCaller:    true,
+		EncoderConfig:    zap.NewProductionEncoderConfig(),
+		Encoding:         "json",
+		ErrorOutputPaths: []string{"stdout"},
+		OutputPaths:      output,
+		InitialFields:    initialFields,
 	}
 
 	cfg := AppConfig{
-		Logging:                b.Logging,
+		Logging:                &zc,
 		PIDPath:                b.Arachne.PIDPath,
 		Orchestrator:           b.Arachne.Orchestrator,
 		StandaloneTargetConfig: b.Arachne.StandaloneTargetConfig,
@@ -220,15 +255,15 @@ func Get(cf string, ec *Extended, logger zap.Logger) (*AppConfig, error) {
 }
 
 // unmarshalBasicConfig fetches the configuration file from local path.
-func unmarshalBasicConfig(data []byte, fname string, logger zap.Logger) (*BasicConfig, error) {
+func unmarshalBasicConfig(data []byte, fname string) (*BasicConfig, error) {
 
 	cfg := new(BasicConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshaling the configuration file %s: %v", fname, err)
+		return nil, errors.Wrapf(err, "error unmarshaling the configuration file %s", fname)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid info in configuration file %s: %v", fname, err)
+		return nil, errors.Wrapf(err, "invalid info in configuration file %s", fname)
 	}
 
 	return cfg, nil
@@ -243,7 +278,7 @@ func FetchRemoteList(
 	HTTPResponseHeaderTimeout time.Duration,
 	orchestratorRESTConf string,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	gl.RemoteConfig = new(RemoteConfig)
@@ -264,7 +299,7 @@ func FetchRemoteList(
 
 		raw, err := ioutil.ReadFile(gl.App.StandaloneTargetConfig)
 		if err != nil {
-			return fmt.Errorf("file error: %v", err)
+			return errors.Wrap(err, "file error")
 		}
 		if err := readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts, minBatchInterval,
 			logger); err != nil {
@@ -312,7 +347,7 @@ func createHTTPClient(timeout time.Duration, disableKeepAlives bool) *http.Clien
 }
 
 // GetHostname returns the hostname.
-func GetHostname(logger zap.Logger) (string, error) {
+func GetHostname(logger *log.Logger) (string, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		logger.Warn("Failed to extract hostname from OS", zap.Error(err))
@@ -330,7 +365,7 @@ func refreshRemoteList(
 	HTTPResponseHeaderTimeout time.Duration,
 	orchestratorRESTConf string,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 
 	client := createHTTPClient(HTTPResponseHeaderTimeout, true)
@@ -353,7 +388,8 @@ func refreshRemoteList(
 				err = readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts,
 					minBatchInterval, logger)
 				if err != nil {
-					logger.Error("error parsing downloaded YAML configuration file", zap.Error(err))
+					logger.Error("error parsing downloaded YAML configuration file",
+						zap.Error(err))
 					goto cont
 				}
 				logger.Info("Will poll Orchestrator again later",
@@ -378,7 +414,7 @@ func refreshRemoteList(
 		case <-kill:
 			confRetry.Stop()
 			logger.Debug("Requested to exit while trying to fetch configuration file.")
-			return fmt.Errorf("received SIG")
+			return errors.New("received SIG")
 		}
 	}
 
@@ -387,7 +423,7 @@ func refreshRemoteList(
 func fetchRemoteListFromOrchestrator(
 	client *http.Client,
 	url string,
-	logger zap.Logger,
+	logger *log.Logger,
 ) (int, []byte, error) {
 
 	var bResp []byte
@@ -405,21 +441,21 @@ func fetchRemoteListFromOrchestrator(
 	}
 	defer resp.Body.Close()
 
-	logger = logger.With(zap.String("status_text", http.StatusText(resp.StatusCode)),
-		zap.Int("status code", resp.StatusCode))
+	logger.Logger = logger.With(zap.String("status_text", http.StatusText(resp.StatusCode)),
+		zap.Int("status_code", resp.StatusCode))
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 		logger.Debug("HTTP response status code from Orchestrator")
 		bResp, err = ioutil.ReadAll(resp.Body)
 	case http.StatusNotFound:
-		err = fmt.Errorf("HTTP response from Orchestrator: 'Idle mode'")
+		err = errors.New("HTTP response from Orchestrator: 'Idle mode'")
 	case http.StatusBadRequest:
-		err = fmt.Errorf("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
+		err = errors.New("HTTP response from Orchestrator: 'Please specify hostname or DC!'")
 	case http.StatusInternalServerError:
 		logger.Warn("HTTP response from Orchestrator: Error opening requested configuration file")
 	default:
-		err = fmt.Errorf("unhandled HTTP response from Orchestrator")
+		err = errors.New("unhandled HTTP response from Orchestrator")
 	}
 
 	return resp.StatusCode, bResp, err
@@ -438,12 +474,12 @@ func readRemoteList(
 	remotes RemoteStore,
 	maxNumSrcTCPPorts uint16,
 	minBatchInterval time.Duration,
-	logger zap.Logger,
+	logger *log.Logger,
 ) error {
 	c := new(RemoteFileConfig)
 
 	if err := json.Unmarshal(raw, c); err != nil {
-		return fmt.Errorf("configuration file parse error (%v)", err)
+		return errors.Wrap(err, "configuration file parse error")
 	}
 
 	// Populate global variables
@@ -469,41 +505,42 @@ func readRemoteList(
 		srcIP, err = network.GetSourceAddr("ip6", strings.ToLower(c.Local.SrcAddress),
 			glRC.HostName, glRC.InterfaceName, logger)
 		if err != nil {
-			return fmt.Errorf("could not retrieve an IPv4 or IPv6 source address (%v)", err)
+			return errors.Wrap(err, "could not retrieve an IPv4 or IPv6 source address")
 		}
 	}
 	glRC.SrcAddress = *srcIP
-	logger.Debug("Arachne agent's source IP address", zap.Object("address", glRC.SrcAddress))
+	logger.Debug("Arachne agent's source IP address", zap.Any("address", glRC.SrcAddress))
 
 	glRC.TargetTCPPort = c.Local.TargetTCPPort
 	if glRC.Timeout, err = time.ParseDuration(c.Local.Timeout); err != nil {
-		return fmt.Errorf("failed to parse the timeout (%v)", err)
+		return errors.Wrap(err, "failed to parse the timeout")
 	}
 	glRC.SrcTCPPortRange[0] = c.Local.BaseSrcTCPPort
 	if c.Local.NumSrcTCPPorts > maxNumSrcTCPPorts {
-		return fmt.Errorf("not more than %d ephemeral source TCP ports may be used", maxNumSrcTCPPorts)
+		return errors.Errorf("not more than %d ephemeral source TCP ports may be used",
+			maxNumSrcTCPPorts)
 	}
 	if c.Local.NumSrcTCPPorts == 0 {
-		return fmt.Errorf("cannot specify zero source TCP ports")
+		return errors.New("cannot specify zero source TCP ports")
 	}
 	glRC.SrcTCPPortRange[1] = c.Local.BaseSrcTCPPort + c.Local.NumSrcTCPPorts - 1
 	if glRC.SrcTCPPortRange.Contains(glRC.TargetTCPPort) {
-		return fmt.Errorf("the listen TCP port cannot reside in the range of the ephemeral TCP "+
+		return errors.Errorf("the listen TCP port cannot reside in the range of the ephemeral TCP "+
 			"source ports [%d-%d]", glRC.SrcTCPPortRange[0], glRC.SrcTCPPortRange[1])
 	}
 	if glRC.BatchInterval, err = time.ParseDuration(c.Local.BatchInterval); err != nil {
-		return fmt.Errorf("failed to parse the batch interval (%v)", err)
+		return errors.Wrap(err, "failed to parse the batch interval")
 	}
 	if glRC.BatchInterval < minBatchInterval {
-		return fmt.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
+		return errors.Errorf("the batch cycle interval cannot be shorter than %v", minBatchInterval)
 	}
 	if glRC.PollOrchestratorInterval.Success, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalSuccess); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for success (%v)", err)
+		return errors.Wrap(err, "failed to parse the Orchestrator poll interval for success")
 	}
 	if glRC.PollOrchestratorInterval.Failure, err =
 		time.ParseDuration(c.Local.PollOrchestratorIntervalFailure); err != nil {
-		return fmt.Errorf("failed to parse the Orchestrator poll interval for failure (%v)", err)
+		return errors.Wrap(err, "failed to parse the Orchestrator poll interval for failure")
 	}
 
 	glRC.QoSEnabled = isTrue(c.Local.QoSEnabled)
@@ -513,26 +550,26 @@ func readRemoteList(
 	for _, server := range DNSInput {
 		currDNSIP := net.ParseIP(strings.TrimSpace(server))
 		if currDNSIP == nil {
-			return fmt.Errorf("configuration file parse error: invalid IP address for DNS server: %v",
-				currDNSIP)
+			return errors.Errorf("configuration file parse error: "+
+				"invalid IP address for DNS server: %v", currDNSIP)
 		}
 		glRC.DNSServersAlt = append(glRC.DNSServersAlt, currDNSIP)
 
 	}
-	logger.Debug("Alternate DNS servers configured", zap.Object("servers", glRC.DNSServersAlt))
+	logger.Debug("Alternate DNS servers configured", zap.Any("servers", glRC.DNSServersAlt))
 
 	walkTargets(glRC, c.Internal, false, remotes, logger)
 	walkTargets(glRC, c.External, true, remotes, logger)
 
 	for key, r := range remotes {
-		logger.Debug("Remote", zap.String("key", key), zap.Object("object", r))
+		logger.Debug("Remote", zap.String("key", key), zap.Any("object", r))
 	}
 
 	return nil
 }
 
 // Validate and create map of ipv4 and ipv6 addresses with string as their key.
-func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger zap.Logger) {
+func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, logger *log.Logger) {
 
 	for _, t := range ts {
 		if grc.ResolveDNS && t.HostName != "" {
@@ -569,7 +606,7 @@ func ResolveDnsTargets(
 	DNSRefresh *time.Ticker,
 	wg *sync.WaitGroup,
 	kill chan struct{},
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	go func() {
 		// Resolve
@@ -578,7 +615,8 @@ func ResolveDnsTargets(
 			if grc.HostName == "" {
 				grc.HostName = localHost
 			} else if grc.HostName != strings.ToLower(localHost) {
-				logger.Warn("DNS-resolved local hostname is different from configured local hostname",
+				logger.Warn("DNS-resolved local hostname is different from "+
+					"configured local hostname",
 					zap.String("DNS-resolved_hostname", localHost),
 					zap.String("configured_hostname", grc.HostName))
 			}

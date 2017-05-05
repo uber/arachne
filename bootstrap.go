@@ -21,17 +21,19 @@
 package arachne
 
 import (
+	coreLog "log"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/collector"
 	"github.com/uber/arachne/config"
 	d "github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/internal/util"
+
+	"go.uber.org/zap"
 )
 
 // Run is the entry point for initiating any Arachne service.
@@ -41,13 +43,21 @@ func Run(ec *config.Extended, opts ...Option) {
 		err error
 	)
 
-	bootstrapLogger := zap.New(zap.NewJSONEncoder())
+	bl, err := zap.NewProduction()
+	if err != nil {
+		coreLog.Fatal(err)
+	}
+	bootstrapLogger := &log.Logger{
+		Logger:    bl,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	util.PrintBanner()
 
 	gl.CLI = config.ParseCliArgs(bootstrapLogger, d.ArachneService, d.ArachneVersion)
 	apply(&gl, opts...)
-	gl.App, err = config.Get(*gl.CLI.ConfigFile, ec, bootstrapLogger)
+	gl.App, err = config.Get(gl.CLI, ec, bootstrapLogger)
 	if err != nil {
 		bootstrapLogger.Error("error reading the configuration file",
 			zap.String("file", *gl.CLI.ConfigFile),
@@ -55,14 +65,13 @@ func Run(ec *config.Extended, opts ...Option) {
 		os.Exit(1)
 	}
 
-	osHostname, _ := config.GetHostname(bootstrapLogger)
-	logger, err := log.CreateLogger(&gl.App.Logging, d.ArachneService, osHostname,
-		gl.App.PIDPath, util.RemovePID, *(gl.CLI.Foreground), bootstrapLogger)
+	logger, err := log.CreateLogger(gl.App.Logging, gl.App.PIDPath, util.RemovePID)
 	if err != nil {
 		bootstrapLogger.Fatal("unable to initialize Arachne Logger", zap.Error(err))
+		os.Exit(1)
 	}
 
-	// Channel to be informed if Unix signal has been received
+	// Channel to be informed if Unix signal has been received.
 	sigC := make(chan struct{}, 1)
 	util.UnixSignals(sigC, logger)
 
@@ -97,7 +106,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		if err != nil {
 			break
 		}
-		logger.Debug("Global JSON configuration", zap.Object("configuration", gl.RemoteConfig))
+		logger.Debug("Global JSON configuration", zap.Any("configuration", gl.RemoteConfig))
 
 		if len(gl.Remotes) == 0 {
 			logger.Debug("No targets to be echoed have been specified")
@@ -116,14 +125,14 @@ func Run(ec *config.Extended, opts ...Option) {
 			dnsWg.Wait()
 			logger.Debug("Remotes after DNS resolution include",
 				zap.Int("count", len(gl.Remotes)),
-				zap.Object("remotes", gl.Remotes))
+				zap.Any("remotes", gl.Remotes))
 		}
 
 		// Channels for Collector to receive Probes and Responses from.
 		sentC := make(chan tcp.Message, d.ChannelOutBufferSize)
 		rcvdC := make(chan tcp.Message, d.ChannelInBufferSize)
 
-		// Actual echoing is a percentage of the total configured batch cycle duration
+		// Actual echoing is a percentage of the total configured batch cycle duration.
 		realBatchInterval := time.Duration(float32(gl.RemoteConfig.BatchInterval) *
 			d.BatchIntervalEchoingPerc)
 		uploadBatchInterval := time.Duration(float32(gl.RemoteConfig.BatchInterval) *
@@ -132,14 +141,14 @@ func Run(ec *config.Extended, opts ...Option) {
 		completeCycleUpload := make(chan bool, 1)
 
 		if !*gl.CLI.SenderOnlyMode && !*gl.CLI.ReceiverOnlyMode {
-			// Start gathering and reporting results
+			// Start gathering and reporting results.
 			killC.Collector = make(chan struct{})
 			collector.Run(&gl, sentC, rcvdC, gl.Remotes, &currentDSCP, sr, completeCycleUpload,
 				&finishedCycleUpload, killC.Collector, logger)
 		}
 
 		if !*gl.CLI.SenderOnlyMode {
-			// Listen for responses or probes from other IPv4 arachne agents
+			// Listen for responses or probes from other IPv4 arachne agents.
 			killC.Receiver = make(chan struct{})
 			err = tcp.Receiver("ip4", &gl.RemoteConfig.SrcAddress, gl.RemoteConfig.TargetTCPPort,
 				gl.RemoteConfig.InterfaceName, sentC, rcvdC, killC.Receiver, logger)
@@ -152,7 +161,7 @@ func Run(ec *config.Extended, opts ...Option) {
 
 		if !*gl.CLI.ReceiverOnlyMode {
 			logger.Debug("Echoing...")
-			// Start echoing all targets
+			// Start echoing all targets.
 			killC.Echo = make(chan struct{})
 			tcp.EchoTargets(gl.Remotes, &gl.RemoteConfig.SrcAddress, gl.RemoteConfig.TargetTCPPort,
 				gl.RemoteConfig.SrcTCPPortRange, gl.RemoteConfig.QoSEnabled, &currentDSCP,
@@ -163,8 +172,8 @@ func Run(ec *config.Extended, opts ...Option) {
 		select {
 		case <-configRefresh.C:
 			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode)
+			log.ResetLogFiles(gl.App.Logging.OutputPaths, d.LogFileSizeMaxMB, d.LogFileSizeKeepKB, logger)
 			logger.Info("Refreshing target list file, if needed")
-			log.ResetLogFile(gl.App.Logging.LogSink, d.LogFileSizeMaxMB, d.LogFileSizeKeepKB, logger)
 			continue
 		case <-sigC:
 			logger.Debug("Received SIG")

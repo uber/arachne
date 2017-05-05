@@ -21,24 +21,32 @@
 package tcp
 
 import (
+	coreLog "log"
 	"net"
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/log"
+	"github.com/uber/arachne/internal/util"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestReceiver(t *testing.T) {
 	var interfaceName string
 	var err error
 
-	logger := zap.New(
-		zap.NewJSONEncoder(),
-		zap.InfoLevel,
-		zap.DiscardOutput,
-	)
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		coreLog.Fatal(err)
+	}
+	logger := &log.Logger{
+		Logger:    l,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	switch runtime.GOOS {
 	case "linux":

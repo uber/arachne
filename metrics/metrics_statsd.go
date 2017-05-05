@@ -24,8 +24,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/arachne/internal/log"
+
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/uber-go/zap"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"gopkg.in/validator.v2"
 	"gopkg.in/yaml.v2"
 )
@@ -69,31 +72,31 @@ var (
 )
 
 // UnmarshalConfig fetches the configuration file from local path.
-func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string, logger zap.Logger) (Config, error) {
+func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string) (Config, error) {
 
 	cfg := new(StatsdConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshaling the statsd section in the configuration file %s: %v",
-			fname, err)
+		return nil, errors.Wrapf(err, "error unmarshaling the statsd section in the "+
+			"configuration file %s", fname)
 	}
 	// Validate on the merged config at the end
 	if err := validator.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid info in the statsd section in the configuration file %s: %v",
-			fname, err)
+		return nil, errors.Wrapf(err, "invalid info in the statsd section in the "+
+			"configuration file %s", fname)
 	}
 
 	return Config(cfg), nil
 }
 
 // NewReporter creates a new metrics backend talking to Statsd.
-func (c StatsdConfig) NewReporter(logger zap.Logger) (Reporter, error) {
+func (c StatsdConfig) NewReporter(logger *log.Logger) (Reporter, error) {
 	s, err := statsd.New(c.Metrics.Statsd.HostPort)
 	if err != nil {
 		return nil, err
 	}
 	// add service as prefix
 	s.Namespace = fmt.Sprintf("%s.", "arachne")
-	logger.Info("Statsd Metrics configuration", zap.Object("object", fmt.Sprintf("%+v", s)))
+	logger.Info("Statsd Metrics configuration", zap.String("object", fmt.Sprintf("%+v", s)))
 
 	return &statsdReporter{client: s}, nil
 }

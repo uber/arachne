@@ -21,19 +21,23 @@
 package collector
 
 import (
+	coreLog "log"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/spacemonkeygo/monotime"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/zap"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
+	"github.com/uber/arachne/internal/util"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/spacemonkeygo/monotime"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func statsUploadMock(
@@ -44,18 +48,22 @@ func statsUploadMock(
 	QOSDSCP tcp.DSCPValue,
 	srcPort uint16,
 	r *report,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 	return
 }
 
 func TestRun(t *testing.T) {
 
-	logger := zap.New(
-		zap.NewJSONEncoder(),
-		zap.InfoLevel,
-		zap.DiscardOutput,
-	)
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		coreLog.Fatal(err)
+	}
+	logger := &log.Logger{
+		Logger:    l,
+		PIDPath:   "",
+		RemovePID: util.RemovePID,
+	}
 
 	source := net.IPv4(10, 0, 0, 1)
 	target := net.IPv4(20, 0, 0, 1)

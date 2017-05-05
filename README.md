@@ -71,7 +71,9 @@ as root user, by being granted `CAP_NET_RAW` capability
 
 
 <hr>
-Released under the [MIT License](LICENSE).
+
+Released under the [MIT License](LICENSE.md).
+
 
 [doc-img]: https://godoc.org/github.com/uber/arachne?status.svg
 [doc]: https://godoc.org/github.com/uber/arachne

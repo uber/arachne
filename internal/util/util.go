@@ -30,10 +30,12 @@ import (
 	"syscall"
 	"time"
 
-	"fmt"
-	"github.com/fatih/color"
-	"github.com/uber-go/zap"
+	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/metrics"
+
+	"github.com/fatih/color"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 const bannerText = `
@@ -69,7 +71,7 @@ func PrintBanner() {
 }
 
 // UnixSignals handles the UNIX signals received.
-func UnixSignals(sigC chan struct{}, logger zap.Logger) {
+func UnixSignals(sigC chan struct{}, logger *log.Logger) {
 	// Set up channel on which to send signal notifications.
 	// We must use a buffered channel or risk missing the signal
 	// if we're not ready to receive when the signal is sent.
@@ -103,7 +105,7 @@ func UnixSignals(sigC chan struct{}, logger zap.Logger) {
 		case syscall.SIGUSR2:
 			logger.Info("got User-defined signal 2/SIGUSR2")
 		default:
-			logger.Fatal("unhandled Unix signal", zap.Object("sig_type", sigType))
+			logger.Fatal("unhandled Unix signal", zap.Any("sig_type", sigType))
 
 		}
 		sigC <- struct{}{}
@@ -112,7 +114,7 @@ func UnixSignals(sigC chan struct{}, logger zap.Logger) {
 }
 
 // CheckPID checks if another Arachne process is already running.
-func CheckPID(fname string, logger zap.Logger) error {
+func CheckPID(fname string, logger *log.Logger) error {
 
 	if _, err := os.Stat(fname); os.IsNotExist(err) {
 		return savePID(fname, os.Getpid(), logger)
@@ -137,12 +139,12 @@ func CheckPID(fname string, logger zap.Logger) error {
 		logger.Error("Arachne already running and different from self PID",
 			zap.Int("other_PID", readPID),
 			zap.Int("self_PID", os.Getpid()))
-		return fmt.Errorf("Arachne already running and different from self PID")
+		return errors.New("Arachne already running and different from self PID")
 	}
 	return savePID(fname, os.Getpid(), logger)
 }
 
-func savePID(fname string, pid int, logger zap.Logger) error {
+func savePID(fname string, pid int, logger *log.Logger) error {
 
 	if err := os.MkdirAll(path.Dir(fname), 0777); err != nil {
 		logger.Error("failed to create PID directory", zap.String("path", path.Dir(fname)), zap.Error(err))
@@ -153,12 +155,12 @@ func savePID(fname string, pid int, logger zap.Logger) error {
 		return err
 	}
 
-	logger.Debug("Created PID file", zap.Nest("PIDfile", zap.String("name", fname), zap.Int("PID", pid)))
+	logger.Debug("Created PID file", zap.String("name", fname), zap.Int("PID", pid))
 	return nil
 }
 
 // RemovePID removes the PID file.
-func RemovePID(fname string, logger zap.Logger) {
+func RemovePID(fname string, logger *log.Logger) {
 	if err := os.Remove(fname); err != nil {
 		logger.Error("failed to remove PID file", zap.String("name", fname), zap.Error(err))
 	} else {
@@ -190,7 +192,7 @@ func CleanUpAll(
 	senderOnlyMode bool,
 	PIDPath string,
 	sr metrics.Reporter,
-	logger zap.Logger,
+	logger *log.Logger,
 ) {
 
 	CleanUpRefresh(killC, receiverOnlyMode, senderOnlyMode)

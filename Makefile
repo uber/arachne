@@ -42,10 +42,9 @@ vendor/github.com/uber/uber-licence: vendor
 vendor/github.com/uber/uber-licence/node_modules: vendor/github.com/uber/uber-licence
 	cd vendor/github.com/uber/uber-licence && npm install
 
-.PHONY: check-license
+.PHONY: check-license add-license
 check-license: vendor/github.com/uber/uber-licence/node_modules
 	./vendor/github.com/uber/uber-licence/bin/licence --dry --file '*.go'
 
-.PHONY: add-license
 add-license: vendor/github.com/uber/uber-licence/node_modules
 	./vendor/github.com/uber/uber-licence/bin/licence --verbose --file '*.go'
