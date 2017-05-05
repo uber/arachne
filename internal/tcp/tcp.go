@@ -773,10 +773,12 @@ func send(
 
 		rand.Seed(time.Now().UnixNano())
 		for srcPort := srcPortRange[0]; srcPort <= srcPortRange[1]; srcPort++ {
+			var lf []zapcore.Field
+
 			packet, err := makePkt(af, srcAddr, dstAddr, srcPort, targetPort, ctrlFlags, seqNum, ackNum)
 			if err != nil {
 				logger.Error("error creating packet", zap.Error(err))
-				break
+				goto cont
 			}
 
 			switch af {
@@ -794,12 +796,12 @@ func send(
 			default:
 				logger.Fatal("unhandled AF family", zap.String("AF", af))
 			}
-			sendRunTime := monoNow()
-			sendUnixTime := timeNow()
 
 			switch {
 			case (ctrlFlags&syn != 0) && (ctrlFlags&ack == 0):
 				flag = "SYN"
+				sendRunTime := monoNow()
+				sendUnixTime := timeNow()
 
 				// Send 'echo' request message to collector
 				sentC <- Message{
@@ -823,18 +825,19 @@ func send(
 				flag = ""
 			}
 
-			lf := []zapcore.Field{
+			lf = []zapcore.Field{
 				zap.String("flag", flag),
 				zap.String("src_address", srcAddr.String()),
 				zap.Uint16("src_port", srcPort),
 				zap.String("dst_address", dstAddr.String()),
 				zap.Uint16("dst_port", targetPort)}
 			if err != nil {
-				logger.Debug("failed to send out", lf...)
-				break
+				logger.Error("failed to send out", lf...)
+			} else {
+				logger.Debug("Sent", lf...)
 			}
-			logger.Debug("Sent", lf...)
 
+		cont:
 			select {
 			case <-kill:
 				logger.Info("Sender requested to exit prematurely.",

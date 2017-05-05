@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -77,14 +76,14 @@ func CreateLogger(c *zap.Config, pidPath string, removePIDfunc removePIDfunc) (*
 
 // ResetLogFiles keeps the last 'LogFileSizeKeepKB' KB of the log file if the size of the log file
 // has exceeded 'LogFileSizeMaxMB' MB within the last 'PollOrchestratorIntervalSuccess' hours.
-func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger *Logger) error {
+func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger *Logger) {
 
-	var errs error
+	var fileSize int
 
 	for _, path := range paths {
 		switch path {
 		case "stdout":
-			continue
+			fallthrough
 		case "stderr":
 			continue
 		}
@@ -93,10 +92,8 @@ func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger
 			logger.Error("failed to open existing log file",
 				zap.String("file", path),
 				zap.Error(err))
-			errs = multierror.Append(errs, err)
 			continue
 		}
-		defer file.Close()
 
 		// Get the file size
 		stat, err := file.Stat()
@@ -104,11 +101,10 @@ func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger
 			logger.Error("failed to read the FileInfo structure of the log file",
 				zap.String("file", path),
 				zap.Error(err))
-			errs = multierror.Append(errs, err)
-			continue
+			goto close
 		}
-		fileSize := int(stat.Size())
 
+		fileSize = int(stat.Size())
 		if fileSize > fileSizeMaxMB*1024*1024 {
 			logger.Debug("Size of log file is larger than maximum allowed. Resetting.",
 				zap.String("file", path),
@@ -121,18 +117,16 @@ func ResetLogFiles(paths []string, fileSizeMaxMB int, fileSizeKeepKB int, logger
 				logger.Error("failed to read existing log file",
 					zap.String("file", path),
 					zap.Error(err))
-				errs = multierror.Append(errs, err)
-				continue
-			}
-			if err = ioutil.WriteFile(path, buf, 0644); err != nil {
+			} else if err = ioutil.WriteFile(path, buf, 0644); err != nil {
 				logger.Error("failed to reset log file",
 					zap.String("file", path),
 					zap.Error(err))
-				errs = multierror.Append(errs, err)
-				continue
 			}
 		}
-	}
 
-	return errs
+		// Avoid possible leaks because of using `defer`
+	close:
+		file.Close()
+
+	}
 }

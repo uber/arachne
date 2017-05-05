@@ -67,7 +67,7 @@ func Run(ec *config.Extended, opts ...Option) {
 
 	logger, err := log.CreateLogger(gl.App.Logging, gl.App.PIDPath, util.RemovePID)
 	if err != nil {
-		bootstrapLogger.Error("unable to initialize Arachne Logger", zap.Error(err))
+		bootstrapLogger.Fatal("unable to initialize Arachne Logger", zap.Error(err))
 		os.Exit(1)
 	}
 
