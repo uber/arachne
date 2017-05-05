@@ -388,7 +388,8 @@ func refreshRemoteList(
 				err = readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts,
 					minBatchInterval, logger)
 				if err != nil {
-					logger.Error("error parsing downloaded YAML configuration file", zap.Error(err))
+					logger.Error("error parsing downloaded YAML configuration file",
+						zap.Error(err))
 					goto cont
 				}
 				logger.Info("Will poll Orchestrator again later",
@@ -516,7 +517,8 @@ func readRemoteList(
 	}
 	glRC.SrcTCPPortRange[0] = c.Local.BaseSrcTCPPort
 	if c.Local.NumSrcTCPPorts > maxNumSrcTCPPorts {
-		return errors.Errorf("not more than %d ephemeral source TCP ports may be used", maxNumSrcTCPPorts)
+		return errors.Errorf("not more than %d ephemeral source TCP ports may be used",
+			maxNumSrcTCPPorts)
 	}
 	if c.Local.NumSrcTCPPorts == 0 {
 		return errors.New("cannot specify zero source TCP ports")
@@ -613,7 +615,8 @@ func ResolveDnsTargets(
 			if grc.HostName == "" {
 				grc.HostName = localHost
 			} else if grc.HostName != strings.ToLower(localHost) {
-				logger.Warn("DNS-resolved local hostname is different from configured local hostname",
+				logger.Warn("DNS-resolved local hostname is different from "+
+					"configured local hostname",
 					zap.String("DNS-resolved_hostname", localHost),
 					zap.String("configured_hostname", grc.HostName))
 			}

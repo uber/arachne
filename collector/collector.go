@@ -138,7 +138,8 @@ func (rs resultStore) walkResults(
 	for target, r := range rs {
 		remote, existsTarget := remotes[target]
 		if !existsTarget {
-			logger.Error("host exists in resultStore, but not in remoteStore", zap.String("host", target))
+			logger.Error("host exists in resultStore, but not in remoteStore",
+				zap.String("host", target))
 		}
 
 		qos := *currentDSCP
@@ -441,8 +442,9 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger)
 
 	if *gl.CLI.Foreground {
 		fmt.Printf("%55s\n", "Arachne ["+defines.ArachneVersion+"]")
-		fmt.Printf("%-55s%37s\n\n", gl.RemoteConfig.HostName+":"+strconv.Itoa(int(gl.RemoteConfig.TargetTCPPort))+
-			" with QoS DSCP '"+currentDSCP+"'", time.Now().Format(time.RFC850))
+		fmt.Printf("%-55s%37s\n\n",
+			gl.RemoteConfig.HostName+":"+strconv.Itoa(int(gl.RemoteConfig.TargetTCPPort))+
+				" with QoS DSCP '"+currentDSCP+"'", time.Now().Format(time.RFC850))
 		fmt.Printf("%51s|%8s%s%8s|\n", "", "", "RTT (msec)", "")
 		fmt.Printf("Host%47s|%4s%s%7s%s%5s|%2s%s\n", "", "", "2-way", "", "1-way", "", "", "Timed Out?")
 		color.Set(color.FgHiYellow)

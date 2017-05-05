@@ -635,8 +635,9 @@ func EchoTargets(
 						// Wait till the above request is fulfilled
 						finishedCycleUpload.Wait()
 						t1 := time.Now()
-						logger.Debug("Completed echoing and uploading all stats of current "+
-							"batch cycle in", zap.String("duration", t1.Sub(t0).String()))
+						logger.Debug("Completed echoing and uploading all "+
+							"stats of current batch cycle",
+							zap.String("duration", t1.Sub(t0).String()))
 						continue
 					}
 					t1 := time.Now()
