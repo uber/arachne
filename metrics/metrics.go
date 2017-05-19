@@ -28,7 +28,7 @@ import (
 
 // Opt is an interface for config unmarshaled in local configuration files.
 type Opt interface {
-	UnmarshalConfig(data []byte, fname string) (Config, error)
+	UnmarshalConfig(data []byte, fname string, logger *zap.Logger) (Config, error)
 }
 
 // Config is an interface for creating metrics-specific stats reporters.

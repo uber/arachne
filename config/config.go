@@ -202,7 +202,7 @@ func Get(cc *CLIConfig, ec *Extended, logger *log.Logger) (*AppConfig, error) {
 		return nil, err
 	}
 
-	mc, err := ec.Metrics.UnmarshalConfig(data, *cc.ConfigFile)
+	mc, err := ec.Metrics.UnmarshalConfig(data, *cc.ConfigFile, logger.Logger)
 	if err != nil {
 		return nil, err
 	}

@@ -70,7 +70,7 @@ var (
 )
 
 // UnmarshalConfig fetches the configuration file from local path.
-func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string) (Config, error) {
+func (c StatsdConfiger) UnmarshalConfig(data []byte, fname string, logger *zap.Logger) (Config, error) {
 
 	cfg := new(StatsdConfig)
 	if err := yaml.Unmarshal(data, cfg); err != nil {
