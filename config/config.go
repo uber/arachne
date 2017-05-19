@@ -320,14 +320,6 @@ func FetchRemoteList(
 	}
 	err := refreshRemoteList(gl, remotes, maxNumSrcTCPPorts, minBatchInterval, HTTPResponseHeaderTimeout,
 		orchestratorRESTConf, kill, logger)
-	// Do not proceed until we have attempted to download the config file at least once
-
-	if err != nil && len(gl.Remotes) != 0 {
-		logger.Debug("Previously fetched target list will be re-used")
-		return nil
-
-	}
-	gl.Remotes = remotes
 	return err
 }
 
@@ -388,10 +380,11 @@ func refreshRemoteList(
 				err = readRemoteList(raw, gl.RemoteConfig, remotes, maxNumSrcTCPPorts,
 					minBatchInterval, logger)
 				if err != nil {
-					logger.Error("error parsing downloaded YAML configuration file",
+					logger.Error("error parsing downloaded configuration file",
 						zap.Error(err))
-					goto cont
+					goto contError
 				}
+				gl.Remotes = remotes
 				logger.Info("Will poll Orchestrator again later",
 					zap.String("retry_time",
 						gl.RemoteConfig.PollOrchestratorInterval.Success.String()))
@@ -399,12 +392,19 @@ func refreshRemoteList(
 
 			case http.StatusNotFound:
 				retryTime = gl.RemoteConfig.PollOrchestratorInterval.Success
-				goto cont
+				goto stayIdle
 			}
 		}
 		logger.Info("Failed to download configuration file", zap.Error(err))
 
-	cont:
+	contError:
+		if len(gl.Remotes) != 0 {
+			logger.Debug("last successfully fetched target list will be re-used")
+			return nil
+
+		}
+	stayIdle:
+		// Do not proceed until we have attempted to download the config file at least once.
 		logger.Info("Retrying configuration download", zap.String("retry_time", retryTime.String()))
 		confRetry := time.NewTicker(retryTime)
 
