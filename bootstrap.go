@@ -171,7 +171,7 @@ func Run(ec *config.Extended, opts ...Option) {
 
 		select {
 		case <-configRefresh.C:
-			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode)
+			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode, gl.RemoteConfig.ResolveDNS)
 			log.ResetLogFiles(gl.App.Logging.OutputPaths, d.LogFileSizeMaxMB, d.LogFileSizeKeepKB, logger)
 			logger.Info("Refreshing target list file, if needed")
 			continue
@@ -179,7 +179,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			logger.Debug("Received SIG")
 			configRefresh.Stop()
 			util.CleanUpAll(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode,
-				gl.App.PIDPath, sr, logger)
+				gl.RemoteConfig.ResolveDNS, gl.App.PIDPath, sr, logger)
 			logger.Info("Exiting")
 			os.Exit(0)
 		}
