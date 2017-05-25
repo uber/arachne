@@ -169,7 +169,7 @@ func RemovePID(fname string, logger *log.Logger) {
 }
 
 // CleanUpRefresh removes state of past refresh.
-func CleanUpRefresh(killC *KillChannels, receiverOnlyMode bool, senderOnlyMode bool) {
+func CleanUpRefresh(killC *KillChannels, receiverOnlyMode bool, senderOnlyMode bool, resolveDNS bool) {
 	// Close all the channels
 	if !receiverOnlyMode {
 		close(killC.Echo)
@@ -182,7 +182,9 @@ func CleanUpRefresh(killC *KillChannels, receiverOnlyMode bool, senderOnlyMode b
 		close(killC.Collector)
 		time.Sleep(50 * time.Millisecond)
 	}
-	close(killC.DNSRefresh)
+	if resolveDNS {
+		close(killC.DNSRefresh)
+	}
 }
 
 // CleanUpAll conducts a clean exit.
@@ -190,12 +192,13 @@ func CleanUpAll(
 	killC *KillChannels,
 	receiverOnlyMode bool,
 	senderOnlyMode bool,
+	resolveDNS bool,
 	PIDPath string,
 	sr metrics.Reporter,
 	logger *log.Logger,
 ) {
 
-	CleanUpRefresh(killC, receiverOnlyMode, senderOnlyMode)
+	CleanUpRefresh(killC, receiverOnlyMode, senderOnlyMode, resolveDNS)
 
 	sr.Close()
 
