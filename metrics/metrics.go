@@ -23,17 +23,17 @@ package metrics
 import (
 	"time"
 
-	"github.com/uber/arachne/internal/log"
+	"go.uber.org/zap"
 )
 
 // Opt is an interface for config unmarshaled in local configuration files.
 type Opt interface {
-	UnmarshalConfig(data []byte, fname string) (Config, error)
+	UnmarshalConfig(data []byte, fname string, logger *zap.Logger) (Config, error)
 }
 
 // Config is an interface for creating metrics-specific stats reporters.
 type Config interface {
-	NewReporter(logger *log.Logger) (Reporter, error)
+	NewReporter(logger *zap.Logger) (Reporter, error)
 }
 
 // Tags is an alias of map[string]string, a type for tags associated with a statistic.
