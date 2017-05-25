@@ -81,7 +81,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		os.Exit(1)
 	}
 
-	sr, err := gl.App.Metrics.NewReporter(logger)
+	sr, err := gl.App.Metrics.NewReporter(logger.Logger)
 	if err != nil {
 		logger.Error("error initializing stats", zap.Error(err))
 	}

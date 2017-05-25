@@ -28,7 +28,7 @@ import (
 // Global constants
 const (
 	ArachneService                  = "arachne"
-	ArachneVersion                  = "0.4.0" //TODO Read from file version.git
+	ArachneVersion                  = "0.4.2" //TODO Read from file version.git
 	ArachneTestConfigFilePathLinux  = "../arachned/config/test_target_config_linux.json"
 	ArachneTestConfigFilePathDarwin = "../arachned/config/test_target_config_darwin.json"
 	BatchIntervalEchoingPerc        = 0.75
@@ -38,11 +38,10 @@ const (
 	DNSRefreshInterval              = 12 * time.Hour
 	HTTPResponseHeaderTimeout       = 10 * time.Second
 	LogFileSizeMaxMB                = 15
-	LogFileSizeKeepKB               = 100
+	LogFileSizeKeepKB               = 250
 	OrchestratorRESTConf            = "conf"
-	OrchestratorRESTRegURL          = "reg"
-	MaxNumRemoteTargets             = 150
-	MaxNumSrcTCPPorts               = 40
+	MaxNumRemoteTargets             = 250
+	MaxNumSrcTCPPorts               = 512
 	MinBatchInterval                = 10 * time.Second
 	NumQOSDCSPValues                = 11
 	PortHTTP                        = 80
