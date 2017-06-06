@@ -488,7 +488,14 @@ func readRemoteList(
 		logger.Warn("Region name not provided in config file")
 	}
 
-	glRC.HostName, _ = GetHostname(logger)
+	glRC.HostName = strings.ToLower(c.Local.HostName)
+	if glRC.HostName == "" {
+		logger.Debug("Hostname not provided in config file")
+		glRC.HostName, _ = GetHostname(logger)
+	} else {
+		logger.Info("Remotely assigned hostname for metrics uploading",
+			zap.String("metrics_hostname", glRC.HostName))
+	}
 
 	glRC.InterfaceName = strings.ToLower(c.Local.InterfaceName)
 	switch {

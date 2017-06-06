@@ -26,7 +26,7 @@ import (
 	"github.com/uber/arachne/metrics"
 )
 
-func ExampleRunArachne() {
+func ExampleRun() {
 
 	mc := new(metrics.StatsdConfiger)
 
