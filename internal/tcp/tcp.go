@@ -181,7 +181,7 @@ func (slice DSCPSlice) Pos(value DSCPValue, logger *log.Logger) uint8 {
 			return uint8(p)
 		}
 	}
-	logger.Error("QoS DSCP value not matching one of supported classes",
+	logger.Warn("QoS DSCP value not matching one of supported classes",
 		zap.Any("DSCP_value", value),
 		zap.String("supported_classes", fmt.Sprintf("%v", slice)))
 	return 0
