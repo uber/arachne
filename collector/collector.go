@@ -130,7 +130,7 @@ type resultWalker func(report, string, uint16, bool, *log.Logger)
 
 func (rs resultStore) walkResults(
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *tcp.DSCP,
 	foreground bool,
 	logger *log.Logger,
 	walkerF ...resultWalker) {
@@ -142,11 +142,10 @@ func (rs resultStore) walkResults(
 				zap.String("host", target))
 		}
 
-		qos := *currentDSCP
 		if remote.External {
-			qos = tcp.DSCPBeLow
+			currentDSCP.Value = tcp.DSCPBeLow
 		}
-		for srcPort, rep := range r[(tcp.GetDSCP).Pos(qos, logger)] {
+		for srcPort, rep := range r[currentDSCP.Value] {
 			walkerF[0](rep, remote.Hostname, srcPort, foreground, logger)
 		}
 		if len(walkerF) > 1 {
@@ -184,7 +183,7 @@ func (rs resultStore) processResults(
 
 	// Store processed report to 'result' data structure for stdout, if needed
 	if !*(gl.CLI.SenderOnlyMode) {
-		QosDSCPIndex := (tcp.GetDSCP).Pos(req.QosDSCP, logger)
+		QosDSCPIndex := (tcp.QoSClass).GetDSCP(req.QosDSCP, logger)
 		rs.add(target, QosDSCPIndex, req.SrcPort, r)
 	}
 
@@ -194,12 +193,12 @@ func (rs resultStore) processResults(
 func (rs resultStore) printResults(
 	gl *config.Global,
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *tcp.DSCP,
 	logger *log.Logger,
 ) {
 	foreground := *gl.CLI.Foreground
 
-	printTableHeader(gl, (*currentDSCP).Text(logger), logger)
+	printTableHeader(gl, currentDSCP.Text, logger)
 	rs.walkResults(remotes, currentDSCP, foreground, logger, printTableEntry)
 	printTableFooter(foreground, logger)
 }
@@ -210,7 +209,7 @@ func Run(
 	sentC chan tcp.Message,
 	rcvdC chan tcp.Message,
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *tcp.DSCP,
 	sr metrics.Reporter,
 	completeCycleUpload chan bool,
 	wg *sync.WaitGroup,
@@ -246,7 +245,7 @@ func batchWorker(
 	remotes config.RemoteStore,
 	ms messageStore,
 	rs resultStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *tcp.DSCP,
 	sfn statsUploader,
 	sr metrics.Reporter,
 	completeCycleUpload chan bool,
@@ -263,7 +262,7 @@ func batchWorker(
 					zap.Any("type", out.Type))
 				continue
 			}
-			QosDSCPIndex := (tcp.GetDSCP).Pos(out.QosDSCP, logger)
+			QosDSCPIndex := (tcp.QoSClass).GetDSCP(out.QosDSCP, logger)
 
 			// SYN sent
 			targetKey := out.DstAddr.String()
@@ -285,7 +284,7 @@ func batchWorker(
 					zap.Any("type", in.Type))
 				continue
 			}
-			QosDSCPIndex := (tcp.GetDSCP).Pos(in.QosDSCP, logger)
+			QosDSCPIndex := (tcp.QoSClass).GetDSCP(in.QosDSCP, logger)
 
 			// SYN+ACK received
 			targetKey := in.SrcAddr.String()
@@ -429,7 +428,7 @@ func zeroOutResults(
 				rs[targetKey][qosDSCP][srcPort] = timedOutReport
 
 				// Upload timed out results
-				sfn(glr, sr, targetKey, remotes, tcp.GetDSCP[qosDSCP], srcPort, &timedOutReport, logger)
+				sfn(glr, sr, targetKey, remotes, tcp.QoSClass[qosDSCP], srcPort, &timedOutReport, logger)
 				time.Sleep(1 * time.Millisecond)
 			}
 		}

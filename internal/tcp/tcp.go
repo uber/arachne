@@ -140,6 +140,11 @@ type Timestamp struct {
 // DSCPValue represents a QoS DSCP value.
 type DSCPValue uint8
 
+type DSCP struct {
+	Value DSCPValue
+	Text  string
+}
+
 // QoS DSCP values mapped to TOS.
 const (
 	DSCPBeLow     DSCPValue = 0   // 000000 BE
@@ -155,68 +160,51 @@ const (
 	DSCPNc7       DSCPValue = 224 // 111000 CS7
 )
 
-// GetDSCP holds all the DSCP values in a slice.
-var GetDSCP = DSCPSlice{
-	DSCPBeLow,
-	DSCPBeHigh,
-	DSCPBulkLow,
-	DSCPBulkHigh,
-	DSCPTier2Low,
-	DSCPTier2High,
-	DSCPTier1Low,
-	DSCPTier1High,
-	DSCPTier0Low,
-	DSCPNc6,
-	DSCPNc7,
+//QoSClass holds all the QoS classes.
+type QoSClass map[uint8]DSCP
+
+//QC is a QoSClass instantiation.
+var QC = map[uint8]DSCP{
+	0:  {DSCPBeLow, "BE low"},   // 000000 BE
+	1:  {DSCPBeHigh, "BE high"}, // 000001 BE
+	2:  {DSCPBulkLow, "AF11"},   // 001010 AF11
+	3:  {DSCPBulkHigh, "AF113"}, // 001110 AF13
+	4:  {DSCPTier2Low, "AF21"},  // 010010 AF21
+	5:  {DSCPTier2High, "AF23"}, // 010110 AF23
+	6:  {DSCPTier1Low, "AF31"},  // 011010 AF31
+	7:  {DSCPTier1High, "AF33"}, // 011110 AF33
+	8:  {DSCPTier0Low, "EF"},    // 101000 EF
+	9:  {DSCPNc6, "CS6"},        // 110000 CS6
+	10: {DSCPNc7, "CS7"},        // 111000 CS7
 }
 
-// DSCPSlice represents a slice of DSCP values.
-type DSCPSlice []DSCPValue
+// GetDSCP returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value.
+func (class QoSClass) GetDSCP(index uint8, logger *log.Logger) DSCP {
+	var output DSCP
 
-// Pos returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value.
-func (slice DSCPSlice) Pos(value DSCPValue, logger *log.Logger) uint8 {
-
-	for p, v := range slice {
-		if v == value {
-			return uint8(p)
-		}
+	output, ok := class[index]
+	if !ok {
+		logger.Warn("QoS class index not matching one of supported classes",
+			zap.Any("class_index", index),
+			zap.String("supported_classes", fmt.Sprintf("%v", slice)))
+		return class[0]
 	}
-	logger.Error("QoS DSCP value not matching one of supported classes",
-		zap.Any("DSCP_value", value),
-		zap.String("supported_classes", fmt.Sprintf("%v", slice)))
-	return 0
+	return output
+
 }
 
 // Text provides the text description of the DSCPValue.
-func (q DSCPValue) Text(logger *log.Logger) string {
-	switch q {
-	case DSCPBeLow:
-		return "BE low"
-	case DSCPBeHigh:
-		return "BE high"
-	case DSCPBulkLow:
-		return "AF11"
-	case DSCPBulkHigh:
-		return "AF113"
-	case DSCPTier2Low:
-		return "AF21"
-	case DSCPTier2High:
-		return "AF23"
-	case DSCPTier1Low:
-		return "AF31"
-	case DSCPTier1High:
-		return "AF33"
-	case DSCPTier0Low:
-		return "EF"
-	case DSCPNc6:
-		return "CS6"
-	case DSCPNc7:
-		return "CS7"
-	default:
-		logger.Error("unhandled QoS DSCP value", zap.Any("DSCP_value", q))
-		return "unknown"
-	}
-}
+//func (q DSCP) Text(logger *log.Logger) string {
+//	for _, class := range QC {
+//		if class.Value == q {
+//			return class.Text
+//		}
+//	}
+//
+//	logger.Error("unhandled QoS DSCP value", zap.Any("DSCP_value", q))
+//	return "unknown"
+//
+//}
 
 // FromExternalTarget returns true if message has been received from external server and not an arachne agent.
 func (m Message) FromExternalTarget(servicePort uint16) bool {
@@ -600,7 +588,7 @@ func EchoTargets(
 	targetPort uint16,
 	srcPortRange PortRange,
 	QoSEnabled bool,
-	currentDSCP *DSCPValue,
+	currentDSCP *DSCP,
 	realBatchInterval time.Duration,
 	batchEndCycle *time.Ticker,
 	sentC chan Message,
@@ -612,12 +600,12 @@ func EchoTargets(
 ) {
 	go func() {
 		for {
-			for i := range GetDSCP {
+			for i := uint8(0); i <= defines.NumQOSDCSPValues; i++ {
 				t0 := time.Now()
 				if !QoSEnabled {
-					*currentDSCP = GetDSCP[0]
+					*currentDSCP = QC[0]
 				} else {
-					*currentDSCP = GetDSCP[i]
+					*currentDSCP = QC[i]
 				}
 				echoTargetsWorker(remotes, srcAddr, targetPort, srcPortRange, *currentDSCP,
 					realBatchInterval, batchEndCycle, sentC, kill, logger)
@@ -655,7 +643,7 @@ func echoTargetsWorker(
 	srcAddr *net.IP,
 	targetPort uint16,
 	srcPortRange PortRange,
-	DSCPv DSCPValue,
+	DSCPv DSCP,
 	realBatchInterval time.Duration,
 	batchEndCycle *time.Ticker,
 	sentC chan Message,
@@ -686,7 +674,7 @@ func echoTargetsWorker(
 		qos := DSCPv
 		if ext {
 			port = defines.PortHTTPS
-			qos = DSCPBeLow
+			qos = QC[0]
 		}
 		err := send(remoteStruct.FieldByName("AF").String(), srcAddr, &dstAddr, port, srcPortRange, qos,
 			syn, rand.Uint32(), 0, sentC, kill, logger)
@@ -713,7 +701,7 @@ func send(
 	dstAddr *net.IP,
 	targetPort uint16,
 	srcPortRange PortRange,
-	DSCPv DSCPValue,
+	DSCPv DSCP,
 	ctrlFlags uint8,
 	seqNum uint32,
 	ackNum uint32,
@@ -761,9 +749,9 @@ func send(
 	// set the QoS DSCP on the socket by setting the TOS field value
 	switch af {
 	case "ip4":
-		err = syscall.SetsockoptInt(sendSocket, syscall.IPPROTO_IP, syscall.IP_TOS, int(DSCPv))
+		err = syscall.SetsockoptInt(sendSocket, syscall.IPPROTO_IP, syscall.IP_TOS, int(DSCPv.Value))
 	case "ip6":
-		err = syscall.SetsockoptInt(sendSocket, syscall.IPPROTO_IPV6, syscall.IPV6_TCLASS, int(DSCPv))
+		err = syscall.SetsockoptInt(sendSocket, syscall.IPPROTO_IPV6, syscall.IPV6_TCLASS, int(DSCPv.Value))
 	}
 	if err != nil {
 		return err
@@ -825,7 +813,7 @@ func send(
 						DstAddr: *dstAddr,
 						Af:      af,
 						SrcPort: srcPort,
-						QosDSCP: DSCPv,
+						QosDSCP: DSCPv.Value,
 						Ts: Timestamp{
 							Run:  monoNow(),
 							Unix: timeNow()},

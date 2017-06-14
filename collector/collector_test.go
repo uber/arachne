@@ -177,9 +177,9 @@ func TestRun(t *testing.T) {
 	finishedCycleUpload.Wait()
 
 	assert := assert.New(t)
-	_, existsProbe := ms.existsSent(target.String(), (tcp.GetDSCP).Pos(currentDSCP, logger), sp)
+	_, existsProbe := ms.existsSent(target.String(), (tcp.QoSClass).GetDSCP(currentDSCP, logger), sp)
 	assert.True(existsProbe, "Probe to "+target.String()+" should exist in 'sent' of messageStore")
-	_, existsReply := ms.existsRcvd(target.String(), (tcp.GetDSCP).Pos(currentDSCP, logger), sp)
+	_, existsReply := ms.existsRcvd(target.String(), (tcp.QoSClass).GetDSCP(currentDSCP, logger), sp)
 	assert.True(existsReply, "Reply from "+target.String()+" should exist in 'rcvd' of messageStore")
 	assert.Contains(ms, targetIPv6.String(), "Probe to "+targetIPv6.String()+
 		" should exist in 'sent' of messageStore")

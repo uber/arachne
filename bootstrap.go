@@ -91,7 +91,7 @@ func Run(ec *config.Extended, opts ...Option) {
 	for {
 		var (
 			err                 error
-			currentDSCP         tcp.DSCPValue
+			currentDSCP         tcp.DSCP
 			dnsWg               sync.WaitGroup
 			finishedCycleUpload sync.WaitGroup
 		)
