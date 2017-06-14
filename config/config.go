@@ -407,12 +407,12 @@ func refreshRemoteList(
 		// Do not proceed until we have attempted to download the config file at least once.
 		logger.Info("Retrying configuration download", zap.String("retry_time", retryTime.String()))
 		confRetry := time.NewTicker(retryTime)
+		defer confRetry.Stop()
 
 		select {
 		case <-confRetry.C:
 			continue
 		case <-kill:
-			confRetry.Stop()
 			logger.Debug("Requested to exit while trying to fetch configuration file.")
 			return errors.New("received SIG")
 		}

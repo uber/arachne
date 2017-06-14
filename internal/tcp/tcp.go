@@ -671,7 +671,8 @@ func echoTargetsWorker(
 
 	// Echo interval is half the time of the 'real' batch interval
 	echoInterval := time.Duration(int(realBatchInterval) / 2 / len(r.MapKeys()))
-	tickCh := time.NewTicker(echoInterval).C
+	tickCh := time.NewTicker(echoInterval)
+	defer tickCh.Stop()
 
 	for _, key := range r.MapKeys() {
 		remoteStruct := r.MapIndex(key)
@@ -695,7 +696,7 @@ func echoTargetsWorker(
 		}
 
 		select {
-		case <-tickCh:
+		case <-tickCh.C:
 			continue
 		case <-batchEndCycle.C:
 			return nil
