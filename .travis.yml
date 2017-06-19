@@ -11,6 +11,9 @@ go:
   - 1.8
   - tip
 
+before_install:
+  - sudo apt-get install -q libpcap-dev
+
 install: make install_ci
 
 script: make test
