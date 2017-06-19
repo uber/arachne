@@ -29,8 +29,8 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// GetIPLayerOptions returns the gopacket options for serialization specific to Linux
-// In linux, gopacket correctly computes the ip Header lengths and checksum
+// GetIPLayerOptions returns the gopacket options for serialization specific to Linux.
+// In linux, gopacket correctly computes the ip Header lengths and checksum.
 func GetIPLayerOptions() gopacket.SerializeOptions {
 	return gopacket.SerializeOptions{
 		ComputeChecksums: true,
@@ -38,7 +38,7 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	return &layers.IPv4{
 		Version:  4,
 		TOS:      tos,

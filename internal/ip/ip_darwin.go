@@ -29,7 +29,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// GetIPLayerOptions is used to get the gopacket serialization options
+// GetIPLayerOptions is used to get the gopacket serialization options.
 func GetIPLayerOptions() gopacket.SerializeOptions {
 	return gopacket.SerializeOptions{
 		ComputeChecksums: true,
@@ -38,7 +38,7 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	header := &layers.IPv4{
 		Version:    4,
 		TOS:        tos,
