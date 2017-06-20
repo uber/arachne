@@ -37,6 +37,7 @@ const (
 	ChannelOutBufferSize            = 800
 	DNSRefreshInterval              = 12 * time.Hour
 	HTTPResponseHeaderTimeout       = 10 * time.Second
+	IPTTL                           = 64
 	LogFileSizeMaxMB                = 15
 	LogFileSizeKeepKB               = 250
 	OrchestratorRESTConf            = "conf"
@@ -44,6 +45,7 @@ const (
 	MaxNumSrcTCPPorts               = 512
 	MinBatchInterval                = 10 * time.Second
 	NumQOSDCSPValues                = 11
+	PcapMaxSnapLen                  = 128
 	PortHTTP                        = 80
 	PortHTTPS                       = 443
 	TimestampPayloadLengthBytes     = 15

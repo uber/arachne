@@ -14,6 +14,9 @@ DC-to-External-Services issues by generating minimal traffic:
 (accidental or not)
 - Whether network-level SLAs are met
 
+## Requirements
+
+ * libpcap
 
 ## Usage
 
