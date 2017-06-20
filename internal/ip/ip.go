@@ -135,7 +135,7 @@ func NewConn(af int, listenPort uint32, intf string, srcAddr net.IP, logger *log
 	fdSend, err := getSendSocket(af)
 	if err != nil {
 		logger.Fatal("Error creating send socket",
-			zap.Int("Address Family", af),
+			zap.Int("address_family", af),
 			zap.Error(err))
 	}
 
@@ -157,7 +157,7 @@ func NewConn(af int, listenPort uint32, intf string, srcAddr net.IP, logger *log
 
 func getIPHeaderLayerV6(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv6 {
 	return &layers.IPv6{
-		Version:      6,
+		Version:      6, // IP Version 6
 		TrafficClass: tos,
 		Length:       tcpLen,
 		NextHeader:   layers.IPProtocolTCP,
