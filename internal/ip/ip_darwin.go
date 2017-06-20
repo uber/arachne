@@ -38,17 +38,17 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	header := &layers.IPv4{
-		Version:    4,
+		Version:    4, // IP Version 4
 		TOS:        tos,
-		IHL:        5,
-		Length:     uint16(tcpLen) + 20,
-		FragOffset: 0,
-		Flags:      0,
+		IHL:        5,           // IHL: 20 bytes
+		Length:     tcpLen + 20, // Total IP packet length
+		FragOffset: 0,           // No fragmentation
+		Flags:      0,           // Flags for fragmentation
 		TTL:        defines.IPTTL,
 		Protocol:   layers.IPProtocolTCP,
-		Checksum:   0,
+		Checksum:   0, // Computed at serialization time
 		SrcIP:      srcIP,
 		DstIP:      dstIP,
 	}

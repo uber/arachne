@@ -38,9 +38,9 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	return &layers.IPv4{
-		Version:  4,
+		Version:  4, // IP Version 4
 		TOS:      tos,
 		Protocol: layers.IPProtocolTCP,
 		TTL:      defines.IPTTL,

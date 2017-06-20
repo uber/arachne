@@ -25,13 +25,13 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/pkg/errors"
 	d "github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -82,7 +82,7 @@ func ipToSockaddr(family int, ip net.IP, port int) (syscall.Sockaddr, error) {
 		copy(sa.Addr[:], ip6)
 		return sa, nil
 	}
-	return nil, &net.AddrError{Err: "invalid address family", Addr: ip.String()}
+	return nil, &net.AddrError{Err: "unhandled AF family", Addr: ip.String()}
 }
 
 // Sendto operates on a Conn file descriptor and mirrors the Sendto syscall.
@@ -155,11 +155,11 @@ func NewConn(af int, listenPort uint32, intf string, srcAddr net.IP, logger *log
 	}
 }
 
-func getIPHeaderLayerV6(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *layers.IPv6 {
+func getIPHeaderLayerV6(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv6 {
 	return &layers.IPv6{
 		Version:      6,
 		TrafficClass: tos,
-		Length:       uint16(tcpLen),
+		Length:       tcpLen,
 		NextHeader:   layers.IPProtocolTCP,
 		SrcIP:        srcIP,
 		DstIP:        dstIP,
@@ -167,7 +167,7 @@ func getIPHeaderLayerV6(tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) *laye
 }
 
 // GetIPHeaderLayer returns the appriately versioned gopacket IP layer
-func GetIPHeaderLayer(af int, tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP) (gopacket.NetworkLayer, error) {
+func GetIPHeaderLayer(af int, tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) (gopacket.NetworkLayer, error) {
 	switch af {
 	case d.AfInet:
 		return getIPHeaderLayerV4(tos, tcpLen, srcIP, dstIP), nil
@@ -175,5 +175,5 @@ func GetIPHeaderLayer(af int, tos uint8, tcpLen int, srcIP net.IP, dstIP net.IP)
 		return getIPHeaderLayerV6(tos, tcpLen, srcIP, dstIP), nil
 	}
 
-	return nil, errors.Errorf("invalid address family")
+	return nil, errors.New("unhandled AF family")
 }
