@@ -24,6 +24,8 @@ import (
 	"errors"
 	"net"
 
+	"golang.org/x/net/bpf"
+
 	"github.com/uber/arachne/defines"
 
 	"github.com/google/gopacket"
