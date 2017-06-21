@@ -22,12 +22,20 @@ package ip
 
 import (
 	"net"
+	"syscall"
+	"unsafe"
+
+	"golang.org/x/net/bpf"
 
 	"github.com/uber/arachne/defines"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
+
+func bindToDevice(s int, ifname string) error {
+	return syscall.BindToDevice(s, ifname)
+}
 
 // GetIPLayerOptions returns the gopacket options for serialization specific to Linux.
 // In linux, gopacket correctly computes the ip Header lengths and checksum.
@@ -47,4 +55,26 @@ func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *l
 		SrcIP:    srcIP,
 		DstIP:    dstIP,
 	}
+}
+
+// attachBPF will attach an assembled BPF filter to the recvSource's raw socket file descriptor
+func (r *recvSource) attachBPF(filter []bpf.RawInstruction) error {
+	prog := syscall.SockFprog{
+		Len:    uint16(len(filter)),
+		Filter: (*syscall.SockFilter)(unsafe.Pointer(&filter[0])),
+	}
+	_, _, err := syscall.Syscall6(
+		syscall.SYS_SETSOCKOPT,
+		uintptr(r.fd),
+		uintptr(syscall.SOL_SOCKET),
+		uintptr(syscall.SO_ATTACH_FILTER),
+		uintptr(unsafe.Pointer(&prog)),
+		uintptr(uint32(unsafe.Sizeof(prog))),
+		0,
+	)
+	if err != 0 {
+		return err
+	}
+
+	return nil
 }

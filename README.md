@@ -14,10 +14,6 @@ DC-to-External-Services issues by generating minimal traffic:
 (accidental or not)
 - Whether network-level SLAs are met
 
-## Requirements
-
- * libpcap
-
 ## Usage
 
 There are two ways to use the Arachne package.
@@ -72,6 +68,14 @@ Arachne is granted access to raw sockets without the need to run with sudo or
 as root user, by being granted `CAP_NET_RAW` capability
 (see: [capabilities][]).
 
+
+### Note on BPF filtering
+
+When receiving packets, Arachne attempts to apply a BPF filter to the raw socket
+so that processing of packets occurs on a much smaller set of (ones destined
+specifically for Arachne agent testing). This is currently supported only on
+Linux and thus performance will be significantly worse on BSD-based systems
+where a larger number of packets must be inspected.
 
 <hr>
 

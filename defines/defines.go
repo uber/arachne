@@ -48,6 +48,7 @@ const (
 	PcapMaxSnapLen                  = 128
 	PortHTTP                        = 80
 	PortHTTPS                       = 443
+	TCPWindowSize                   = 0xaaaa
 	TimestampPayloadLengthBytes     = 15
 )
 

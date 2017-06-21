@@ -21,13 +21,20 @@
 package ip
 
 import (
+	"errors"
 	"net"
+
+	"golang.org/x/net/bpf"
 
 	"github.com/uber/arachne/defines"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
+
+func bindToDevice(s int, ifname string) error {
+	return nil
+}
 
 // GetIPLayerOptions is used to get the gopacket serialization options.
 func GetIPLayerOptions() gopacket.SerializeOptions {
@@ -60,4 +67,9 @@ func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *l
 	header.Flags = nf
 
 	return header
+}
+
+// attachBPF will attach an assembled BPF filter to the recvSource's raw socket file descriptor
+func (r *recvSource) attachBPF(filter []bpf.RawInstruction) error {
+	return errors.New("BPF Filter not supported on Darwin")
 }
