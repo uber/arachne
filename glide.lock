@@ -1,5 +1,5 @@
-hash: d34034d4aba4b8adfa5b71ccf367ab53194d50c1a851f746352b4d0affd7646f
-updated: 2017-06-15T11:00:12.683129577-04:00
+hash: 4164bca439e719a18801cdfde8f69fb5fc5d04f7efe8a6956541293455126e9c
+updated: 2017-06-22T22:44:03.896452818-04:00
 imports:
 - name: github.com/DataDog/datadog-go
   version: 909c02b65dd8a52e8fa6072db9752a112227cf21
@@ -8,10 +8,9 @@ imports:
 - name: github.com/fatih/color
   version: dea9d3a26a087187530244679c1cfb3a42937794
 - name: github.com/google/gopacket
-  version: e20408befa7dcef61c3c35f53df06d3f8a194e60
+  version: b83f94714c36e30ce851be1d5a0a5226f9f1bca4
   subpackages:
   - layers
-  - pcap
 - name: github.com/jawher/mow.cli
   version: 772320464101e904cd51198160eb4d489be9cc49
 - name: github.com/mattn/go-colorable
@@ -43,6 +42,10 @@ imports:
   - internal/exit
   - internal/multierror
   - zapcore
+- name: golang.org/x/net
+  version: 057a25b06247e0c51ba15d8ae475feb2fcb72164
+  subpackages:
+  - bpf
 - name: golang.org/x/sys
   version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
   subpackages:
