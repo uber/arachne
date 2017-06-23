@@ -103,7 +103,7 @@ func TestMakePkt(t *testing.T) {
 
 	packet, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
 	if err != nil {
-		t.Fatal("error creating IPv4 TCP SYN packet, (%v)", err)
+		t.Fatal("error creating IPv4 TCP SYN packet", err)
 	}
 
 	assert.Equal(packet, expectedPacket, "unexpectedly formatted IPv4 TCP Syn packet generated")
@@ -117,7 +117,7 @@ func TestMakePkt(t *testing.T) {
 	expectedPacket = []byte{102, 64, 0, 0, 0, 20, 6, 0, 32, 1, 6, 19, 147, 255, 139, 64, 0, 0, 0, 0, 0, 0, 0, 1, 32, 4, 11, 189, 3, 47, 14, 65, 0, 0, 0, 0, 0, 0, 0, 2, 4, 176, 0, 44, 0, 0, 0, 0, 0, 0, 0, 0, 80, 2, 170, 170, 125, 212, 0, 0}
 	packet, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
 	if err != nil {
-		t.Fatal("error creating IPv6 TCP SYN packet, (%v)", err)
+		t.Fatal("error creating IPv6 TCP SYN packet", err)
 	}
 
 	assert.Equal(packet, expectedPacket, "unexpectedly formatted IPv6 TCP Syn packet generated")
