@@ -24,12 +24,11 @@ import (
 	"errors"
 	"net"
 
-	"golang.org/x/net/bpf"
-
 	"github.com/uber/arachne/defines"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"golang.org/x/net/bpf"
 )
 
 func bindToDevice(s int, ifname string) error {

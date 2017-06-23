@@ -24,8 +24,6 @@ import (
 	"net"
 	"syscall"
 
-	"golang.org/x/net/bpf"
-
 	d "github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 
@@ -33,6 +31,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"golang.org/x/net/bpf"
 )
 
 type recvSource struct {
