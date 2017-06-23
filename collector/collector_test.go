@@ -117,7 +117,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: source,
 		DstAddr: target,
-		Af:      network.Family(&target),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -131,7 +131,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoReply,
 		SrcAddr: target,
 		DstAddr: source,
-		Af:      network.Family(&source),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -146,7 +146,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: source,
 		DstAddr: unreachableTarget,
-		Af:      network.Family(&unreachableTarget),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -160,7 +160,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: sourceIPv6,
 		DstAddr: targetIPv6,
-		Af:      network.Family(&targetIPv6),
+		Af:      defines.AfInet6,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
