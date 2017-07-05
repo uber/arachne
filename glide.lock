@@ -1,5 +1,5 @@
-hash: 4164bca439e719a18801cdfde8f69fb5fc5d04f7efe8a6956541293455126e9c
-updated: 2017-06-22T22:44:03.896452818-04:00
+hash: 7e94fcaba10efa96d8b4f69b4de027c397486b92f500a0d71523cba6f9f6bfed
+updated: 2017-07-05T13:50:14.240565466-04:00
 imports:
 - name: github.com/DataDog/datadog-go
   version: 909c02b65dd8a52e8fa6072db9752a112227cf21
@@ -43,7 +43,7 @@ imports:
   - internal/multierror
   - zapcore
 - name: golang.org/x/net
-  version: 057a25b06247e0c51ba15d8ae475feb2fcb72164
+  version: 570fa1c91359c1869590e9cedf3b53162a51a167
   subpackages:
   - bpf
 - name: golang.org/x/sys
@@ -67,3 +67,4 @@ testImports:
   version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
   subpackages:
   - assert
+  - require

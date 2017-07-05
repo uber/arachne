@@ -21,40 +21,11 @@
 package ip
 
 import (
-	"net"
 	"syscall"
 	"unsafe"
 
-	"github.com/uber/arachne/defines"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"golang.org/x/net/bpf"
 )
-
-func bindToDevice(s int, ifname string) error {
-	return syscall.BindToDevice(s, ifname)
-}
-
-// GetIPLayerOptions returns the gopacket options for serialization specific to Linux.
-// In linux, gopacket correctly computes the ip Header lengths and checksum.
-func GetIPLayerOptions() gopacket.SerializeOptions {
-	return gopacket.SerializeOptions{
-		ComputeChecksums: true,
-		FixLengths:       true,
-	}
-}
-
-func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
-	return &layers.IPv4{
-		Version:  4, // IP Version 4
-		TOS:      tos,
-		Protocol: layers.IPProtocolTCP,
-		TTL:      defines.IPTTL,
-		SrcIP:    srcIP,
-		DstIP:    dstIP,
-	}
-}
 
 // attachBPF will attach an assembled BPF filter to the recvSource's raw socket file descriptor
 func (r *recvSource) attachBPF(filter []bpf.RawInstruction) error {

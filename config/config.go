@@ -606,8 +606,8 @@ func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, 
 	}
 }
 
-// ResolveDnsTargets resolves the DNS names of the IP addresses of all echo targets and the localhost.
-func ResolveDnsTargets(
+// ResolveDNSTargets resolves the DNS names of the IP addresses of all echo targets and the localhost.
+func ResolveDNSTargets(
 	remotes RemoteStore,
 	grc *RemoteConfig,
 	DNSRefresh *time.Ticker,
@@ -658,7 +658,7 @@ func ResolveDnsTargets(
 				continue
 			case <-kill:
 				DNSRefresh.Stop()
-				logger.Debug("ResolveDnsTargets goroutine returning")
+				logger.Debug("ResolveDNSTargets goroutine returning")
 				return
 			}
 		}

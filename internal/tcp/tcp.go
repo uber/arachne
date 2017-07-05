@@ -190,43 +190,48 @@ var (
 )
 
 // parsePktTCP extracts the TCP header layer and payload from an incoming packet.
-func parsePktTCP(pkt gopacket.Packet) (tcpHeader layers.TCP, payload time.Time, err error) {
-	tcp := pkt.Layer(layers.LayerTypeTCP).(*layers.TCP)
-	if tcp == nil {
-		err = errors.New("Invalid TCP Layer")
-		return
+func parsePktTCP(pkt gopacket.Packet) (layers.TCP, time.Time, error) {
+	layer := pkt.Layer(layers.LayerTypeTCP)
+	if layer == nil {
+		return layers.TCP{}, time.Time{}, errors.New("invalid TCP layer")
 	}
-	tcpHeader = *tcp
+	tcp := layer.(*layers.TCP)
 
+	var payload time.Time
 	if len(tcp.Payload) >= defines.TimestampPayloadLengthBytes {
 		ts := append([]byte(nil), tcp.Payload[:defines.TimestampPayloadLengthBytes]...)
-		err = payload.UnmarshalBinary(ts)
+		if err := payload.UnmarshalBinary(ts); err != nil {
+			return *tcp, time.Time{}, err
+		}
 	}
 
-	return
+	return *tcp, payload, nil
 }
 
 // parsePktIP parses the IP header of an incoming packet and extracts the src IP addr and DSCP value.
-func parsePktIP(pkt gopacket.Packet) (srcIP net.IP, dscpv DSCPValue, err error) {
+func parsePktIP(pkt gopacket.Packet) (net.IP, DSCPValue, error) {
 	switch pkt.NetworkLayer().LayerType() {
 	case layers.LayerTypeIPv4:
 		ip := pkt.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
 		if ip == nil {
-			err = errors.New("Invalid IPv4 Layer")
-			return
+			return net.IPv4zero, DSCPValue(0), errors.New("layer type IPv4 invalid")
 		}
-		srcIP = ip.SrcIP
-		dscpv = DSCPValue(ip.TOS)
+		return ip.SrcIP, DSCPValue(ip.TOS), nil
 	case layers.LayerTypeIPv6:
 		ip := pkt.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
 		if ip == nil {
-			err = errors.New("Invalid IPv6 Layer")
-			return
+			return net.IPv6zero, DSCPValue(0), errors.New("layer type IPv6 invalid")
 		}
-		srcIP = ip.SrcIP
-		dscpv = DSCPValue(ip.TrafficClass)
+		return ip.SrcIP, DSCPValue(ip.TrafficClass), nil
 	}
-	return
+
+	return net.IPv4zero, DSCPValue(0), errors.New("unknown network layer type")
+}
+
+// optsTCP contains the gopacket serialization options for the TCP layer
+var optsTCP = gopacket.SerializeOptions{
+	ComputeChecksums: true,
+	FixLengths:       true,
 }
 
 // makePkt creates and serializes a TCP Echo.
@@ -245,10 +250,6 @@ func makePkt(
 
 	// gopacket serialization options for IP header are OS specific
 	optsIP := ip.GetIPLayerOptions()
-	optsTCP := gopacket.SerializeOptions{
-		ComputeChecksums: true,
-		FixLengths:       true,
-	}
 
 	// When replying with SYN+ACK, a time-stamped payload is included
 	if flags.syn != false && flags.ack != false {
@@ -287,11 +288,11 @@ func makePkt(
 		return nil, err
 	}
 
-	switch ipLayer.(type) {
+	switch layer := ipLayer.(type) {
 	case *layers.IPv4:
-		err = ipLayer.(*layers.IPv4).SerializeTo(buf, optsIP)
+		err = layer.SerializeTo(buf, optsIP)
 	case *layers.IPv6:
-		err = ipLayer.(*layers.IPv6).SerializeTo(buf, optsIP)
+		err = layer.SerializeTo(buf, optsIP)
 	}
 	if err != nil {
 		return nil, err
@@ -341,13 +342,12 @@ func Receiver(
 				continue
 			}
 
-			fromAddrStr := srcIP.String()
 			switch {
 			case tcpHeader.SYN && !tcpHeader.ACK:
 				// Received SYN (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN"),
-					zap.String("src_address", fromAddrStr),
+					zap.Stringer("src_address", srcIP),
 					zap.Uint16("src_port", uint16(tcpHeader.SrcPort)))
 
 				// Replying with SYN+ACK to Arachne agent
@@ -355,7 +355,7 @@ func Receiver(
 				seqNum := rand.Uint32()
 				ackNum := tcpHeader.Seq + 1
 				flags := tcpFlags{syn: true, ack: true}
-				if err = send(conn, &srcIP, listenPort, srcPortRange, DSCPv,
+				if err := send(conn, &srcIP, listenPort, srcPortRange, DSCPv,
 					flags, seqNum, ackNum, sentC, kill, logger); err != nil {
 					logger.Error("failed to send SYN-ACK", zap.Error(err))
 				}
@@ -364,7 +364,7 @@ func Receiver(
 				// Received SYN+ACK (Open port)
 				logger.Debug("Received",
 					zap.String("flag", "SYN ACK"),
-					zap.String("src_address", fromAddrStr),
+					zap.Stringer("src_address", srcIP),
 					zap.Uint16("src_port", uint16(tcpHeader.SrcPort)))
 
 				inMsg := Message{
@@ -377,7 +377,8 @@ func Receiver(
 					QosDSCP: DSCPv,
 					Ts: Timestamp{
 						Run:     receiveTime,
-						Payload: payloadTime},
+						Payload: payloadTime,
+					},
 					Seq: tcpHeader.Seq,
 					Ack: tcpHeader.Ack,
 				}

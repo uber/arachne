@@ -21,6 +21,7 @@
 package tcp
 
 import (
+	"encoding/hex"
 	"net"
 	"runtime"
 	"testing"
@@ -31,42 +32,54 @@ import (
 	"github.com/uber/arachne/defines"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+type testPkt struct {
+	hexData string
+	name    string
+}
 
 func TestParsePktTCP(t *testing.T) {
 	assert := assert.New(t)
 
-	pktData := []byte{69, 0, 0, 55, 145, 204, 64, 0, 56, 6, 81, 145, 10, 1, 1, 10, 10, 0, 0, 10, 121, 24, 172, 79, 118, 141, 174, 112, 251, 246, 199, 17, 80, 18, 170, 170, 154, 237, 0, 0, 1, 0, 0, 0, 14, 208, 222, 40, 104, 36, 169, 82, 116, 0, 0}
-	pkt := gopacket.NewPacket(pktData, layers.LayerTypeIPv4, gopacket.Default)
-
-	tcpHeader, payload, err := parsePktTCP(pkt)
-	if err != nil {
-		t.Fatal("Extracting TCP Header and Payload from gopacket failed", err)
+	pkt := testPkt{
+		hexData: "4500003791cc4000380651910a01010a0a00000a7918ac4f768dae70fbf6c7115012aaaa9aed0000010000000ed0de286824a952740000",
+		name:    "TCP test packet (ipv4), TCP Src Port: 31000, TCP Dst Port 44111, payload TimeStamp: 2017-06-22T21:06:48.615076468+00:00",
 	}
+	data, _ := hex.DecodeString(pkt.hexData)
+
+	createdPkt := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
+	require.NotNil(t, createdPkt, "creating packet %s failed", pkt.name)
+
+	tcpHeader, payload, err := parsePktTCP(createdPkt)
+	require.NoError(t, err, "decoding TCP header from packet %s failed: %v", pkt.name, err)
 
 	assert.Equal(tcpHeader.SrcPort, layers.TCPPort(31000), "unexpectedly formatted TCP Src Port")
 	assert.Equal(tcpHeader.DstPort, layers.TCPPort(44111), "unexpectedly formatted TCP Dst Port")
 
 	expectedTime, err := time.Parse(time.RFC3339, "2017-06-22T21:06:48.615076468+00:00")
-	if err != nil {
-		t.Fatal("Error parsing timestamp", err)
-	}
-	assert.Equal(payload, expectedTime, "unexpectedly formatted TCP paylaod timestamp")
+	require.NoError(t, err, "parsing timestamp from TCP packet %s failed: %v", pkt.name, err)
 
+	assert.Equal(payload, expectedTime, "unexpectedly formatted TCP payload timestamp")
 }
 
 func TestParsePktIP(t *testing.T) {
 	assert := assert.New(t)
 
-	pktData := []byte{69, 88, 0, 55, 145, 204, 64, 0, 56, 6, 81, 145, 10, 1, 1, 10, 10, 0, 0, 10, 121, 24, 172, 79, 118, 141, 174, 112, 251, 246, 199, 17, 80, 18, 170, 170, 154, 237, 0, 0, 1, 0, 0, 0, 14, 208, 222, 40, 104, 36, 169, 82, 116, 0, 0}
-	pkt := gopacket.NewPacket(pktData, layers.LayerTypeIPv4, gopacket.Default)
-
-	srcIP, dscpv, err := parsePktIP(pkt)
-	if err != nil {
-		t.Fatal("Extracting IP Src Port and DSCP Value from gopacket failed", err)
+	pkt := testPkt{
+		hexData: "4558003791cc4000380651910a01010a0a00000a7918ac4f768dae70fbf6c7115012aaaa9aed0000010000000ed0de286824a952740000",
+		name:    "IPv4 test packet, Src IP 10.1.1.10, DSCP value 88",
 	}
-	expectedIP := net.ParseIP("10.1.1.10")
 
+	data, _ := hex.DecodeString(pkt.hexData)
+	createdPkt := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
+	require.NotNil(t, createdPkt, "creating packet %s failed", pkt.name)
+
+	srcIP, dscpv, err := parsePktIP(createdPkt)
+	require.NoError(t, err, "decoded IP Header from packet %s failed: %v", pkt.name, err)
+
+	expectedIP := net.ParseIP("10.1.1.10")
 	assert.Equal(expectedIP.Equal(srcIP), true, "unexpectedly formatted Src IP address")
 	assert.Equal(dscpv, DSCPValue(88), "unexpectedly formatted IP Header DSCP value")
 }
@@ -75,14 +88,14 @@ func TestMakePkt(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		af             int
-		srcAddr        net.IP
-		dstAddr        net.IP
-		srcPort        uint16
-		dstPort        uint16
-		expectedPacket = []byte{}
-		packet         = []byte{}
-		err            error
+		af          int
+		srcAddr     net.IP
+		dstAddr     net.IP
+		srcPort     uint16
+		dstPort     uint16
+		expectedPkt testPkt
+		want        []byte
+		err         error
 	)
 
 	// IPv4
@@ -94,19 +107,24 @@ func TestMakePkt(t *testing.T) {
 	// Darwin uses Host-byte order for Length and FragOffset in IPv4 Headers
 	switch runtime.GOOS {
 	case "linux":
-		expectedPacket = []byte{69, 100, 0, 40, 0, 0, 0, 0, 64, 6, 92, 107, 10, 0, 0, 1, 20, 0, 0, 1, 121, 124, 172, 79, 0, 0, 0, 0, 0, 0, 0, 0, 80, 2, 170, 170, 193, 106, 0, 0}
+		expectedPkt = testPkt{
+			hexData: "456400280000000040065c6b0a00000114000001797cac4f00000000000000005002aaaac16a0000",
+			name:    "Linux IPv4/TCP test Packet, SrcIP: 10.0.0.1, DstIP: 20.0.0.1, SrcPort 31100, DstPort: 44111, Flags: SYN",
+		}
 	case "darwin":
-		expectedPacket = []byte{69, 100, 40, 0, 0, 0, 0, 0, 64, 6, 52, 147, 10, 0, 0, 1, 20, 0, 0, 1, 121, 124, 172, 79, 0, 0, 0, 0, 0, 0, 0, 0, 80, 2, 170, 170, 193, 106, 0, 0}
+		expectedPkt = testPkt{
+			hexData: "4564280000000000400634930a00000114000001797cac4f00000000000000005002aaaac16a0000",
+			name:    "Darwin IPv4/TCP test Packet, SrcIP: 10.0.0.1, DstIP: 20.0.0.1, SrcPort 31100, DstPort: 44111, Flags: SYN",
+		}
 	default:
 		t.Fatalf("unsupported OS for testing: " + runtime.GOOS)
 	}
 
-	packet, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
-	if err != nil {
-		t.Fatal("error creating IPv4 TCP SYN packet", err)
-	}
+	want, _ = hex.DecodeString(expectedPkt.hexData)
+	got, err := makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
+	require.NoError(t, err, "creating IPv4 TCP packet %s failed: %v", expectedPkt.name, err)
 
-	assert.Equal(packet, expectedPacket, "unexpectedly formatted IPv4 TCP Syn packet generated")
+	assert.Equal(got, want, "unexpectedly formatted IPv4 TCP Syn packet generated")
 
 	// IPv6
 	af = defines.AfInet6
@@ -114,11 +132,14 @@ func TestMakePkt(t *testing.T) {
 	dstAddr = net.IP{0x20, 0x04, 0x0B, 0xBD, 0x03, 0x2F, 0x0E, 0x41, 0, 0, 0, 0, 0, 0, 0, 2}
 	srcPort = uint16(1200)
 	dstPort = uint16(44)
-	expectedPacket = []byte{102, 64, 0, 0, 0, 20, 6, 0, 32, 1, 6, 19, 147, 255, 139, 64, 0, 0, 0, 0, 0, 0, 0, 1, 32, 4, 11, 189, 3, 47, 14, 65, 0, 0, 0, 0, 0, 0, 0, 2, 4, 176, 0, 44, 0, 0, 0, 0, 0, 0, 0, 0, 80, 2, 170, 170, 125, 212, 0, 0}
-	packet, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
-	if err != nil {
-		t.Fatal("error creating IPv6 TCP SYN packet", err)
+	expectedPkt = testPkt{
+		hexData: "66400000001406002001061393ff8b40000000000000000120040bbd032f0e41000000000000000204b0002c00000000000000005002aaaa7dd40000",
+		name:    "IPv6/TCP test Packet, SrcIP: 2001:613:93ff:8b40::1, DstIP: 2004:bbd:32f:e41::2, SrcPort 1200, DstPort: 44, Flags: SYN",
 	}
 
-	assert.Equal(packet, expectedPacket, "unexpectedly formatted IPv6 TCP Syn packet generated")
+	want, _ = hex.DecodeString(expectedPkt.hexData)
+	got, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
+	require.NoError(t, err, "creating IPv6 TCP packet %s failed: %v", expectedPkt.name, err)
+
+	assert.Equal(want, got, "unexpectedly formatted IPv6 TCP Syn packet generated")
 }

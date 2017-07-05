@@ -179,15 +179,18 @@ func getRecvSource(af int, listenPort uint32, intf string, logger *log.Logger) (
 	case d.AfInet6:
 		ipHeaderOffset = ip6HeaderLength
 	}
-	if filter, err := getBPFFilter(ipHeaderOffset, uint32(listenPort)); err != nil {
+
+	filter, err := getBPFFilter(ipHeaderOffset, uint32(listenPort))
+	if err != nil {
 		logger.Warn("Failed to compile BPF Filter", zap.Error(err))
-	} else {
-		// Attempt to attach the BPF filter.
-		// This is currently only supported on Linux systems.
-		if err = rs.attachBPF(filter); err != nil {
-			logger.Warn("Failed to attach BPF filter to recvSource. All incoming packets will be processed",
-				zap.Error(err))
-		}
+		return rs, nil
+	}
+
+	// Attempt to attach the BPF filter.
+	// This is currently only supported on Linux systems.
+	if err := rs.attachBPF(filter); err != nil {
+		logger.Warn("Failed to attach BPF filter to recvSource. All incoming packets will be processed",
+			zap.Error(err))
 	}
 
 	return rs, nil
