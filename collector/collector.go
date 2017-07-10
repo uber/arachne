@@ -383,12 +383,13 @@ func statsUpload(
 	}
 
 	tags := map[string]string{
-		"dc":          glr.Region,
-		"host":        glr.HostName,
-		"target":      remote.Hostname,
-		"dscp":        strconv.Itoa(int(QOSDSCP)),
-		"source_port": strconv.Itoa(int(srcPort)),
-		"timed_out":   strconv.FormatBool((*r).timedOut),
+		"location":        glr.Location,
+		"host":            glr.HostName,
+		"target":          remote.Hostname,
+		"target_location": remote.Location,
+		"dscp":            strconv.Itoa(int(QOSDSCP)),
+		"source_port":     strconv.Itoa(int(srcPort)),
+		"timed_out":       strconv.FormatBool((*r).timedOut),
 	}
 
 	// Both following in nanoseconds

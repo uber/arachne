@@ -81,18 +81,20 @@ type Remote struct {
 	IP       net.IP
 	AF       string
 	Hostname string
+	Location string
 	External bool
 }
 
 type target struct {
 	HostName string `json:"host_name"`
 	IP       string `json:"ip"`
+	Location string
 }
 
 // RemoteFileConfig needed for the JSON decoder to know which fields to expect and parse.
 type RemoteFileConfig struct {
 	Local struct {
-		Region                          string `json:"region"`
+		Location                        string `json:"location"`
 		HostName                        string `json:"host_name"`
 		SrcAddress                      string `json:"src_address"`
 		InterfaceName                   string `json:"interface_name"`
@@ -131,7 +133,7 @@ type CLIConfig struct {
 
 // RemoteConfig holds the info parsed from the JSON config file.
 type RemoteConfig struct {
-	Region                   string
+	Location                 string
 	HostName                 string
 	SrcAddress               net.IP
 	SrcTCPPortRange          tcp.PortRange
@@ -483,9 +485,9 @@ func readRemoteList(
 	}
 
 	// Populate global variables
-	glRC.Region = strings.ToLower(c.Local.Region)
-	if glRC.Region == "" {
-		logger.Warn("Region name not provided in config file")
+	glRC.Location = strings.ToLower(c.Local.Location)
+	if glRC.Location == "" {
+		logger.Warn("Location not provided in config file")
 	}
 
 	glRC.HostName = strings.ToLower(c.Local.HostName)
@@ -602,7 +604,7 @@ func walkTargets(grc *RemoteConfig, ts []target, ext bool, remotes RemoteStore, 
 			continue
 		}
 		remotes[currIP.String()] = Remote{currIP, network.Family(&currIP),
-			t.HostName, ext}
+			t.HostName, t.Location, ext}
 	}
 }
 
@@ -649,7 +651,8 @@ func ResolveDnsTargets(
 
 				currIP := net.ParseIP(addressKey)
 				remotes[addressKey] = Remote{currIP, network.Family(&currIP), hostname,
-					remotes[addressKey].External}
+					remotes[addressKey].Location, remotes[addressKey].External,
+				}
 			}
 			wg.Done()
 
