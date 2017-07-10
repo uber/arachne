@@ -21,6 +21,7 @@
 package ip
 
 import (
+	"fmt"
 	"net"
 	"syscall"
 
@@ -34,26 +35,101 @@ import (
 	"golang.org/x/net/bpf"
 )
 
+// DSCPValue represents a QoS DSCP value.
+type DSCPValue uint8
+
+// QoS DSCP values mapped to TOS.
+const (
+	DSCPBeLow     DSCPValue = 0   // 000000 BE
+	DSCPBeHigh    DSCPValue = 4   // 000001 BE
+	DSCPBulkLow   DSCPValue = 40  // 001010 AF11
+	DSCPBulkHigh  DSCPValue = 56  // 001110 AF13
+	DSCPTier2Low  DSCPValue = 72  // 010010 AF21
+	DSCPTier2High DSCPValue = 88  // 010110 AF23
+	DSCPTier1Low  DSCPValue = 104 // 011010 AF31
+	DSCPTier1High DSCPValue = 120 // 011110 AF33
+	DSCPTier0Low  DSCPValue = 160 // 101000 EF
+	DSCPNc6       DSCPValue = 192 // 110000 CS6
+	DSCPNc7       DSCPValue = 224 // 111000 CS7
+)
+
+// GetDSCP holds all the DSCP values in a slice.
+var GetDSCP = DSCPSlice{
+	DSCPBeLow,
+	DSCPBeHigh,
+	DSCPBulkLow,
+	DSCPBulkHigh,
+	DSCPTier2Low,
+	DSCPTier2High,
+	DSCPTier1Low,
+	DSCPTier1High,
+	DSCPTier0Low,
+	DSCPNc6,
+	DSCPNc7,
+}
+
+// DSCPSlice represents a slice of DSCP values.
+type DSCPSlice []DSCPValue
+
+// Pos returns the index of the DSCP value in the DSCPSlice, not the actual DSCP value.
+func (slice DSCPSlice) Pos(value DSCPValue, logger *log.Logger) uint8 {
+
+	for p, v := range slice {
+		if v == value {
+			return uint8(p)
+		}
+	}
+	logger.Warn("QoS DSCP value not matching one of supported classes",
+		zap.Any("DSCP_value", value),
+		zap.String("supported_classes", fmt.Sprintf("%v", slice)))
+	return 0
+}
+
+// Text provides the text description of the DSCPValue.
+func (q DSCPValue) Text(logger *log.Logger) string {
+	switch q {
+	case DSCPBeLow:
+		return "BE low"
+	case DSCPBeHigh:
+		return "BE high"
+	case DSCPBulkLow:
+		return "AF11"
+	case DSCPBulkHigh:
+		return "AF113"
+	case DSCPTier2Low:
+		return "AF21"
+	case DSCPTier2High:
+		return "AF23"
+	case DSCPTier1Low:
+		return "AF31"
+	case DSCPTier1High:
+		return "AF33"
+	case DSCPTier0Low:
+		return "EF"
+	case DSCPNc6:
+		return "CS6"
+	case DSCPNc7:
+		return "CS7"
+	default:
+		logger.Error("unhandled QoS DSCP value", zap.Any("DSCP_value", q))
+		return "unknown"
+	}
+}
+
 type recvSource struct {
 	fd int
 }
 
 // Conn represents the underyling functionality to send and recv Arachne echo requests.
 type Conn struct {
-	SrcAddr net.IP
-	AF      int
-	sendFD  int
-	recvSrc recvSource
+	SrcAddr    net.IP
+	AF         int
+	sendFD     int
+	recvSrc    recvSource
+	ListenPort layers.TCPPort
 }
 
-const (
-	ip4HeaderLength uint32 = 20 // v4 header bytes
-	ip6HeaderLength uint32 = 40 // v6 header bytes
-)
-
-const maxPacketSizeBytes int = 1500 // size of packet buffer
-
-// Recvfrom mirrors the syscall of the same name, operating on a recvSource file descriptor
+// Recvfrom mirrors the syscall of the same name, operating on a recvSource file descriptor.
 func (r *recvSource) Recvfrom(b []byte) (int, syscall.Sockaddr, error) {
 	return syscall.Recvfrom(r.fd, b, 0)
 }
@@ -61,18 +137,17 @@ func (r *recvSource) Recvfrom(b []byte) (int, syscall.Sockaddr, error) {
 // Close is used to close a Conn's send file descriptor and recv source file desciptor.
 func (c *Conn) Close(logger *log.Logger) {
 	if err := syscall.Close(c.recvSrc.fd); err != nil {
-		logger.Error("Error closing Conn recv file descriptor", zap.Error(err))
+		logger.Error("error closing Conn recv file descriptor", zap.Error(err))
 	}
 	if err := syscall.Close(c.sendFD); err != nil {
-		logger.Error("Error closing Conn send file descriptor", zap.Error(err))
+		logger.Error("error closing Conn send file descriptor", zap.Error(err))
 	}
 }
 
 // NextPacket gets bytes of next available packet, and returns them in a decoded gopacket.Packet
 func (c *Conn) NextPacket() (gopacket.Packet, error) {
-	buf := make([]byte, maxPacketSizeBytes)
-	_, _, err := c.recvSrc.Recvfrom(buf)
-	if err != nil {
+	buf := make([]byte, d.MaxPacketSizeBytes)
+	if _, _, err := c.recvSrc.Recvfrom(buf); err != nil {
 		return nil, err
 	}
 
@@ -156,7 +231,7 @@ func getBPFFilter(ipHeaderOffset uint32, listenPort uint32) ([]bpf.RawInstructio
 	})
 }
 
-func getRecvSource(af int, listenPort uint32, intf string, logger *log.Logger) (recvSource, error) {
+func getRecvSource(af int, listenPort layers.TCPPort, intf string, logger *log.Logger) (recvSource, error) {
 	var (
 		rs             recvSource
 		ipHeaderOffset uint32
@@ -175,9 +250,9 @@ func getRecvSource(af int, listenPort uint32, intf string, logger *log.Logger) (
 
 	switch af {
 	case d.AfInet:
-		ipHeaderOffset = ip4HeaderLength
+		ipHeaderOffset = d.IPv4HeaderLength
 	case d.AfInet6:
-		ipHeaderOffset = ip6HeaderLength
+		ipHeaderOffset = d.IPv6HeaderLength
 	}
 
 	filter, err := getBPFFilter(ipHeaderOffset, uint32(listenPort))
@@ -197,7 +272,7 @@ func getRecvSource(af int, listenPort uint32, intf string, logger *log.Logger) (
 }
 
 // NewConn returns a raw socket connection to send and receive packets.
-func NewConn(af int, listenPort uint32, intf string, srcAddr net.IP, logger *log.Logger) *Conn {
+func NewConn(af int, listenPort layers.TCPPort, intf string, srcAddr net.IP, logger *log.Logger) *Conn {
 	fdSend, err := getSendSocket(af)
 	if err != nil {
 		logger.Fatal("Error creating send socket",
@@ -208,23 +283,24 @@ func NewConn(af int, listenPort uint32, intf string, srcAddr net.IP, logger *log
 	rs, err := getRecvSource(af, listenPort, intf, logger)
 	if err != nil {
 		logger.Fatal("Error creating recv source",
-			zap.Uint32("listenPort", listenPort),
+			zap.Any("listenPort", listenPort),
 			zap.String("interface", intf),
 			zap.Error(err))
 	}
 
 	return &Conn{
-		SrcAddr: srcAddr,
-		AF:      af,
-		sendFD:  fdSend,
-		recvSrc: rs,
+		SrcAddr:    srcAddr,
+		AF:         af,
+		sendFD:     fdSend,
+		recvSrc:    rs,
+		ListenPort: listenPort,
 	}
 }
 
-func getIPHeaderLayerV6(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv6 {
+func getIPHeaderLayerV6(tos DSCPValue, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv6 {
 	return &layers.IPv6{
 		Version:      6, // IP Version 6
-		TrafficClass: tos,
+		TrafficClass: uint8(tos),
 		Length:       tcpLen,
 		NextHeader:   layers.IPProtocolTCP,
 		SrcIP:        srcIP,
@@ -233,7 +309,7 @@ func getIPHeaderLayerV6(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *l
 }
 
 // GetIPHeaderLayer returns the appriately versioned gopacket IP layer
-func GetIPHeaderLayer(af int, tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) (gopacket.NetworkLayer, error) {
+func GetIPHeaderLayer(af int, tos DSCPValue, tcpLen uint16, srcIP net.IP, dstIP net.IP) (gopacket.NetworkLayer, error) {
 	switch af {
 	case d.AfInet:
 		return getIPHeaderLayerV4(tos, tcpLen, srcIP, dstIP), nil

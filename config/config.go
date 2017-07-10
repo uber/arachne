@@ -37,6 +37,7 @@ import (
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
 
+	"github.com/google/gopacket/layers"
 	"github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	"github.com/uber/arachne/defines"
@@ -92,20 +93,20 @@ type target struct {
 // RemoteFileConfig needed for the JSON decoder to know which fields to expect and parse.
 type RemoteFileConfig struct {
 	Local struct {
-		Region                          string `json:"region"`
-		HostName                        string `json:"host_name"`
-		SrcAddress                      string `json:"src_address"`
-		InterfaceName                   string `json:"interface_name"`
-		TargetTCPPort                   uint16 `json:"target_tcp_port"`
-		Timeout                         string `json:"timeout"`
-		BaseSrcTCPPort                  uint16 `json:"base_src_tcp_port"`
-		NumSrcTCPPorts                  uint16 `json:"num_src_tcp_ports"`
-		BatchInterval                   string `json:"batch_interval"`
-		QoSEnabled                      string `json:"qos"`
-		ResolveDNS                      string `json:"resolve_dns"`
-		DNSServersAlt                   string `json:"dns_servers_alternate"`
-		PollOrchestratorIntervalSuccess string `json:"poll_orchestrator_interval_success"`
-		PollOrchestratorIntervalFailure string `json:"poll_orchestrator_interval_failure"`
+		Region                          string         `json:"region"`
+		HostName                        string         `json:"host_name"`
+		SrcAddress                      string         `json:"src_address"`
+		InterfaceName                   string         `json:"interface_name"`
+		TargetTCPPort                   layers.TCPPort `json:"target_tcp_port"`
+		Timeout                         string         `json:"timeout"`
+		BaseSrcTCPPort                  layers.TCPPort `json:"base_src_tcp_port"`
+		NumSrcTCPPorts                  uint16         `json:"num_src_tcp_ports"`
+		BatchInterval                   string         `json:"batch_interval"`
+		QoSEnabled                      string         `json:"qos"`
+		ResolveDNS                      string         `json:"resolve_dns"`
+		DNSServersAlt                   string         `json:"dns_servers_alternate"`
+		PollOrchestratorIntervalSuccess string         `json:"poll_orchestrator_interval_success"`
+		PollOrchestratorIntervalFailure string         `json:"poll_orchestrator_interval_failure"`
 	} `json:"local"`
 	Internal []target `json:"internal"`
 	External []target `json:"external"`
@@ -136,7 +137,7 @@ type RemoteConfig struct {
 	SrcAddress               net.IP
 	SrcTCPPortRange          tcp.PortRange
 	InterfaceName            string
-	TargetTCPPort            uint16
+	TargetTCPPort            layers.TCPPort
 	Timeout                  time.Duration
 	BatchInterval            time.Duration
 	QoSEnabled               bool
@@ -530,7 +531,7 @@ func readRemoteList(
 	if c.Local.NumSrcTCPPorts == 0 {
 		return errors.New("cannot specify zero source TCP ports")
 	}
-	glRC.SrcTCPPortRange[1] = c.Local.BaseSrcTCPPort + c.Local.NumSrcTCPPorts - 1
+	glRC.SrcTCPPortRange[1] = c.Local.BaseSrcTCPPort + layers.TCPPort(c.Local.NumSrcTCPPorts) - 1
 	if glRC.SrcTCPPortRange.Contains(glRC.TargetTCPPort) {
 		return errors.Errorf("the listen TCP port cannot reside in the range of the ephemeral TCP "+
 			"source ports [%d-%d]", glRC.SrcTCPPortRange[0], glRC.SrcTCPPortRange[1])

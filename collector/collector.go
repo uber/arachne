@@ -27,8 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/ip"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/metrics"
@@ -49,14 +51,14 @@ type report struct {
 }
 
 // map[target address string] => *[QOS_DCSP_VALUE] =>map[source port]
-type resultStore map[string]*[defines.NumQOSDCSPValues]map[uint16]report
+type resultStore map[string]*[defines.NumQOSDCSPValues]map[layers.TCPPort]report
 type messageStore map[string]*[defines.NumQOSDCSPValues]srcPortScopedMessageStore
 
 type srcPortScopedMessageStore struct {
 	sent srcPortScopedMessages
 	rcvd srcPortScopedMessages
 }
-type srcPortScopedMessages map[uint16]tcp.Message
+type srcPortScopedMessages map[layers.TCPPort]tcp.Message
 
 func (ms messageStore) target(target string, QosDSCPIndex uint8) *srcPortScopedMessageStore {
 	// TODO: validate dscp is in range or create a dscp type alias
@@ -72,19 +74,19 @@ func (ms messageStore) target(target string, QosDSCPIndex uint8) *srcPortScopedM
 	return &ms[target][QosDSCPIndex]
 }
 
-func (spsm srcPortScopedMessages) add(srcPort uint16, message tcp.Message) {
+func (spsm srcPortScopedMessages) add(srcPort layers.TCPPort, message tcp.Message) {
 	spsm[srcPort] = message
 }
 
-func (ms messageStore) sentAdd(target string, QosDSCPIndex uint8, srcPort uint16, message tcp.Message) {
+func (ms messageStore) sentAdd(target string, QosDSCPIndex uint8, srcPort layers.TCPPort, message tcp.Message) {
 	ms.target(target, QosDSCPIndex).sent.add(srcPort, message)
 }
 
-func (ms messageStore) rcvdAdd(target string, QosDSCPIndex uint8, srcPort uint16, message tcp.Message) {
+func (ms messageStore) rcvdAdd(target string, QosDSCPIndex uint8, srcPort layers.TCPPort, message tcp.Message) {
 	ms.target(target, QosDSCPIndex).rcvd.add(srcPort, message)
 }
 
-func (ms messageStore) existsRcvd(target string, QosDSCPIndex uint8, srcPort uint16) (tcp.Message, bool) {
+func (ms messageStore) existsRcvd(target string, QosDSCPIndex uint8, srcPort layers.TCPPort) (tcp.Message, bool) {
 
 	if _, exists := ms[target]; !exists {
 		return tcp.Message{}, false
@@ -99,7 +101,7 @@ func (ms messageStore) existsRcvd(target string, QosDSCPIndex uint8, srcPort uin
 	return matchedMsg, true
 }
 
-func (ms messageStore) existsSent(target string, QosDSCPIndex uint8, srcPort uint16) (tcp.Message, bool) {
+func (ms messageStore) existsSent(target string, QosDSCPIndex uint8, srcPort layers.TCPPort) (tcp.Message, bool) {
 
 	if _, exists := ms[target]; !exists {
 		return tcp.Message{}, false
@@ -114,23 +116,23 @@ func (ms messageStore) existsSent(target string, QosDSCPIndex uint8, srcPort uin
 	return matchedMsg, true
 }
 
-func (rs resultStore) add(target string, QosDSCPIndex uint8, srcPort uint16, r report) {
+func (rs resultStore) add(target string, QosDSCPIndex uint8, srcPort layers.TCPPort, r report) {
 
 	if rs[target] == nil {
-		var resDSCP [defines.NumQOSDCSPValues]map[uint16]report
+		var resDSCP [defines.NumQOSDCSPValues]map[layers.TCPPort]report
 		rs[target] = &resDSCP
 	}
 	if rs[target][QosDSCPIndex] == nil {
-		rs[target][QosDSCPIndex] = make(map[uint16]report)
+		rs[target][QosDSCPIndex] = make(map[layers.TCPPort]report)
 	}
 	rs[target][QosDSCPIndex][srcPort] = r
 }
 
-type resultWalker func(report, string, uint16, bool, *log.Logger)
+type resultWalker func(report, string, layers.TCPPort, bool, *log.Logger)
 
 func (rs resultStore) walkResults(
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *ip.DSCPValue,
 	foreground bool,
 	logger *log.Logger,
 	walkerF ...resultWalker) {
@@ -144,9 +146,9 @@ func (rs resultStore) walkResults(
 
 		qos := *currentDSCP
 		if remote.External {
-			qos = tcp.DSCPBeLow
+			qos = ip.DSCPBeLow
 		}
-		for srcPort, rep := range r[(tcp.GetDSCP).Pos(qos, logger)] {
+		for srcPort, rep := range r[(ip.GetDSCP).Pos(qos, logger)] {
 			walkerF[0](rep, remote.Hostname, srcPort, foreground, logger)
 		}
 		if len(walkerF) > 1 {
@@ -184,7 +186,7 @@ func (rs resultStore) processResults(
 
 	// Store processed report to 'result' data structure for stdout, if needed
 	if !*(gl.CLI.SenderOnlyMode) {
-		QosDSCPIndex := (tcp.GetDSCP).Pos(req.QosDSCP, logger)
+		QosDSCPIndex := (ip.GetDSCP).Pos(req.QosDSCP, logger)
 		rs.add(target, QosDSCPIndex, req.SrcPort, r)
 	}
 
@@ -194,7 +196,7 @@ func (rs resultStore) processResults(
 func (rs resultStore) printResults(
 	gl *config.Global,
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *ip.DSCPValue,
 	logger *log.Logger,
 ) {
 	foreground := *gl.CLI.Foreground
@@ -210,7 +212,7 @@ func Run(
 	sentC chan tcp.Message,
 	rcvdC chan tcp.Message,
 	remotes config.RemoteStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *ip.DSCPValue,
 	sr metrics.Reporter,
 	completeCycleUpload chan bool,
 	wg *sync.WaitGroup,
@@ -246,7 +248,7 @@ func batchWorker(
 	remotes config.RemoteStore,
 	ms messageStore,
 	rs resultStore,
-	currentDSCP *tcp.DSCPValue,
+	currentDSCP *ip.DSCPValue,
 	sfn statsUploader,
 	sr metrics.Reporter,
 	completeCycleUpload chan bool,
@@ -263,7 +265,7 @@ func batchWorker(
 					zap.Any("type", out.Type))
 				continue
 			}
-			QosDSCPIndex := (tcp.GetDSCP).Pos(out.QosDSCP, logger)
+			QosDSCPIndex := (ip.GetDSCP).Pos(out.QosDSCP, logger)
 
 			// SYN sent
 			targetKey := out.DstAddr.String()
@@ -285,7 +287,7 @@ func batchWorker(
 					zap.Any("type", in.Type))
 				continue
 			}
-			QosDSCPIndex := (tcp.GetDSCP).Pos(in.QosDSCP, logger)
+			QosDSCPIndex := (ip.GetDSCP).Pos(in.QosDSCP, logger)
 
 			// SYN+ACK received
 			targetKey := in.SrcAddr.String()
@@ -359,8 +361,8 @@ type statsUploader func(
 	sr metrics.Reporter,
 	target string,
 	remotes config.RemoteStore,
-	QOSDSCP tcp.DSCPValue,
-	srcPort uint16,
+	QOSDSCP ip.DSCPValue,
+	srcPort layers.TCPPort,
 	r *report,
 	logger *log.Logger,
 )
@@ -370,8 +372,8 @@ func statsUpload(
 	sr metrics.Reporter,
 	target string,
 	remotes config.RemoteStore,
-	QOSDSCP tcp.DSCPValue,
-	srcPort uint16,
+	QOSDSCP ip.DSCPValue,
+	srcPort layers.TCPPort,
 	r *report,
 	logger *log.Logger,
 ) {
@@ -415,12 +417,12 @@ func zeroOutResults(
 	for targetKey := range ms {
 		_, existsTarget := rs[targetKey]
 		if !existsTarget {
-			var resDSCP [defines.NumQOSDCSPValues]map[uint16]report
+			var resDSCP [defines.NumQOSDCSPValues]map[layers.TCPPort]report
 			rs[targetKey] = &resDSCP
 		}
 		for qosDSCP := 0; qosDSCP < defines.NumQOSDCSPValues; qosDSCP++ {
 			if rs[targetKey][qosDSCP] == nil {
-				rs[targetKey][qosDSCP] = make(map[uint16]report)
+				rs[targetKey][qosDSCP] = make(map[layers.TCPPort]report)
 			}
 			for srcPort := range ms[targetKey][qosDSCP].sent {
 				if _, existsSrc := rs[targetKey][qosDSCP][srcPort]; existsSrc {
@@ -429,7 +431,7 @@ func zeroOutResults(
 				rs[targetKey][qosDSCP][srcPort] = timedOutReport
 
 				// Upload timed out results
-				sfn(glr, sr, targetKey, remotes, tcp.GetDSCP[qosDSCP], srcPort, &timedOutReport, logger)
+				sfn(glr, sr, targetKey, remotes, ip.GetDSCP[qosDSCP], srcPort, &timedOutReport, logger)
 				time.Sleep(1 * time.Millisecond)
 			}
 		}
@@ -454,7 +456,7 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger)
 		logger.Info("Arachne -- Table of Results",
 			zap.String("version", defines.ArachneVersion),
 			zap.String("hostname", gl.RemoteConfig.HostName),
-			zap.Uint16("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
+			zap.Any("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
 			zap.String("QoS_DSCP", currentDSCP),
 		)
 	}
@@ -474,7 +476,7 @@ func printTableFooter(foreground bool, logger *log.Logger) {
 func printTableEntry(
 	r report,
 	targetHost string,
-	srcPort uint16,
+	srcPort layers.TCPPort,
 	foreground bool,
 	logger *log.Logger,
 ) {
@@ -518,7 +520,7 @@ func printTableEntry(
 	if !foreground {
 		logger.Info("Result",
 			zap.String("host", targetHost),
-			zap.Uint16("source_port", srcPort),
+			zap.Any("source_port", srcPort),
 			twoWay,
 			oneWay,
 			zap.String("timed_out", timedOut))

@@ -72,9 +72,9 @@ as root user, by being granted `CAP_NET_RAW` capability
 ### Note on BPF filtering
 
 When receiving packets, Arachne attempts to apply a BPF filter to the raw socket
-so that processing of packets occurs on a much smaller set of (ones destined
+so that processing of packets occurs on a much smaller set (ones destined
 specifically for Arachne agent testing). This is currently supported only on
-Linux and thus performance will be significantly worse on BSD-based systems
+Linux and thus performance will be worse on BSD-based systems
 where a larger number of packets must be inspected.
 
 <hr>

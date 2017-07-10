@@ -44,10 +44,10 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos DSCPValue, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	header := &layers.IPv4{
 		Version:    4, // IP Version 4
-		TOS:        tos,
+		TOS:        uint8(tos),
 		IHL:        5,           // IHL: 20 bytes
 		Length:     tcpLen + 20, // Total IP packet length
 		FragOffset: 0,           // No fragmentation
@@ -70,5 +70,5 @@ func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *l
 
 // attachBPF will attach an assembled BPF filter to the recvSource's raw socket file descriptor
 func (r *recvSource) attachBPF(filter []bpf.RawInstruction) error {
-	return errors.New("BPF Filter not supported on Darwin")
+	return errors.New("BPF Filter currently not supported on Darwin")
 }

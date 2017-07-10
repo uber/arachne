@@ -95,7 +95,7 @@ func Run(ec *config.Extended, opts ...Option) {
 	for {
 		var (
 			err                 error
-			currentDSCP         tcp.DSCPValue
+			currentDSCP         ip.DSCPValue
 			dnsWg               sync.WaitGroup
 			finishedCycleUpload sync.WaitGroup
 		)
@@ -140,7 +140,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		if connIPv4 == nil {
 			connIPv4 = ip.NewConn(
 				d.AfInet,
-				uint32(gl.RemoteConfig.TargetTCPPort),
+				gl.RemoteConfig.TargetTCPPort,
 				gl.RemoteConfig.InterfaceName,
 				gl.RemoteConfig.SrcAddress,
 				logger)
@@ -164,7 +164,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		if !*gl.CLI.SenderOnlyMode {
 			// Listen for responses or probes from other IPv4 arachne agents.
 			killC.Receiver = make(chan struct{})
-			err = tcp.Receiver(connIPv4, gl.RemoteConfig.TargetTCPPort, sentC, rcvdC, killC.Receiver, logger)
+			err = tcp.Receiver(connIPv4, sentC, rcvdC, killC.Receiver, logger)
 			if err != nil {
 				logger.Fatal("IPv4 receiver failed to start", zap.Error(err))
 			}

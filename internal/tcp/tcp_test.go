@@ -27,10 +27,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/ip"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/uber/arachne/defines"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,7 +82,7 @@ func TestParsePktIP(t *testing.T) {
 
 	expectedIP := net.ParseIP("10.1.1.10")
 	assert.Equal(expectedIP.Equal(srcIP), true, "unexpectedly formatted Src IP address")
-	assert.Equal(dscpv, DSCPValue(88), "unexpectedly formatted IP Header DSCP value")
+	assert.Equal(dscpv, ip.DSCPValue(88), "unexpectedly formatted IP Header DSCP value")
 }
 
 func TestMakePkt(t *testing.T) {
@@ -91,8 +92,8 @@ func TestMakePkt(t *testing.T) {
 		af          int
 		srcAddr     net.IP
 		dstAddr     net.IP
-		srcPort     uint16
-		dstPort     uint16
+		srcPort     layers.TCPPort
+		dstPort     layers.TCPPort
 		expectedPkt testPkt
 		want        []byte
 		err         error
@@ -102,8 +103,8 @@ func TestMakePkt(t *testing.T) {
 	af = defines.AfInet
 	srcAddr = net.IPv4(10, 0, 0, 1)
 	dstAddr = net.IPv4(20, 0, 0, 1)
-	srcPort = uint16(31100)
-	dstPort = uint16(44111)
+	srcPort = layers.TCPPort(31100)
+	dstPort = layers.TCPPort(44111)
 	// Darwin uses Host-byte order for Length and FragOffset in IPv4 Headers
 	switch runtime.GOOS {
 	case "linux":
@@ -130,8 +131,8 @@ func TestMakePkt(t *testing.T) {
 	af = defines.AfInet6
 	srcAddr = net.IP{0x20, 0x01, 0x06, 0x13, 0x93, 0xFF, 0x8B, 0x40, 0, 0, 0, 0, 0, 0, 0, 1}
 	dstAddr = net.IP{0x20, 0x04, 0x0B, 0xBD, 0x03, 0x2F, 0x0E, 0x41, 0, 0, 0, 0, 0, 0, 0, 2}
-	srcPort = uint16(1200)
-	dstPort = uint16(44)
+	srcPort = layers.TCPPort(1200)
+	dstPort = layers.TCPPort(44)
 	expectedPkt = testPkt{
 		hexData: "66400000001406002001061393ff8b40000000000000000120040bbd032f0e41000000000000000204b0002c00000000000000005002aaaa7dd40000",
 		name:    "IPv6/TCP test Packet, SrcIP: 2001:613:93ff:8b40::1, DstIP: 2004:bbd:32f:e41::2, SrcPort 1200, DstPort: 44, Flags: SYN",
