@@ -35,7 +35,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Conn represents the underyling functionality to send and recv Arachne echo requests.
+// Conn represents the underlying functionality to send and recv Arachne echo requests.
 type Conn struct {
 	SrcAddr net.IP
 	AF      int

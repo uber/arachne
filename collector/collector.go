@@ -39,7 +39,7 @@ import (
 )
 
 const hostWidth = 51
-const tableWidth = 92
+const tableWidth = 119
 
 // report of metrics measured
 type report struct {
@@ -126,7 +126,7 @@ func (rs resultStore) add(target string, QosDSCPIndex uint8, srcPort uint16, r r
 	rs[target][QosDSCPIndex][srcPort] = r
 }
 
-type resultWalker func(report, string, uint16, bool, *log.Logger)
+type resultWalker func(report, string, string, uint16, bool, *log.Logger)
 
 func (rs resultStore) walkResults(
 	remotes config.RemoteStore,
@@ -147,7 +147,7 @@ func (rs resultStore) walkResults(
 			qos = tcp.DSCPBeLow
 		}
 		for srcPort, rep := range r[(tcp.GetDSCP).Pos(qos, logger)] {
-			walkerF[0](rep, remote.Hostname, srcPort, foreground, logger)
+			walkerF[0](rep, remote.Hostname, remote.Location, srcPort, foreground, logger)
 		}
 		if len(walkerF) > 1 {
 			logger.Error("only one result walker function expected currently")
@@ -383,12 +383,13 @@ func statsUpload(
 	}
 
 	tags := map[string]string{
-		"dc":          glr.Region,
-		"host":        glr.HostName,
-		"target":      remote.Hostname,
-		"dscp":        strconv.Itoa(int(QOSDSCP)),
-		"source_port": strconv.Itoa(int(srcPort)),
-		"timed_out":   strconv.FormatBool((*r).timedOut),
+		"host":            glr.HostName,
+		"host_location":   glr.Location,
+		"target":          remote.Hostname,
+		"target_location": remote.Location,
+		"dscp":            strconv.Itoa(int(QOSDSCP)),
+		"source_port":     strconv.Itoa(int(srcPort)),
+		"timed_out":       strconv.FormatBool((*r).timedOut),
 	}
 
 	// Both following in nanoseconds
@@ -441,19 +442,29 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger)
 	defer color.Unset()
 
 	if *gl.CLI.Foreground {
-		fmt.Printf("%55s\n", "Arachne ["+defines.ArachneVersion+"]")
-		fmt.Printf("%-55s%37s\n\n",
+		fmt.Printf("%74s\n", "Arachne ["+defines.ArachneVersion+"]")
+		fmt.Printf("%-55s%64s\n",
 			gl.RemoteConfig.HostName+":"+strconv.Itoa(int(gl.RemoteConfig.TargetTCPPort))+
 				" with QoS DSCP '"+currentDSCP+"'", time.Now().Format(time.RFC850))
-		fmt.Printf("%51s|%8s%s%8s|\n", "", "", "RTT (msec)", "")
-		fmt.Printf("Host%47s|%4s%s%7s%s%5s|%2s%s\n", "", "", "2-way", "", "1-way", "", "", "Timed Out?")
+		if gl.RemoteConfig.Location != "" && gl.RemoteConfig.Location != " " {
+			fmt.Printf("Location: %s\n", gl.RemoteConfig.Location)
+		}
+
+		fmt.Printf("\n%51s|%26s|%8s%s%8s|\n", "", "", "", "RTT (msec)", "")
+		fmt.Printf("Host%47s|%8s%s%10s|%4s%s%7s%s%5s|%2s%s\n", "",
+			"", "Location", "",
+			"", "2-way", "", "1-way", "",
+			"", "Timed Out?")
 		color.Set(color.FgHiYellow)
-		fmt.Printf(strings.Repeat("-", hostWidth) + "|" + strings.Repeat("-", 26) + "|" +
+		fmt.Printf(strings.Repeat("-", hostWidth) + "|" +
+			strings.Repeat("-", 26) + "|" +
+			strings.Repeat("-", 26) + "|" +
 			strings.Repeat("-", 13) + "\n")
 	} else {
 		logger.Info("Arachne -- Table of Results",
 			zap.String("version", defines.ArachneVersion),
-			zap.String("hostname", gl.RemoteConfig.HostName),
+			zap.String("host", gl.RemoteConfig.HostName),
+			zap.String("host_location", gl.RemoteConfig.Location),
 			zap.Uint16("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
 			zap.String("QoS_DSCP", currentDSCP),
 		)
@@ -474,6 +485,7 @@ func printTableFooter(foreground bool, logger *log.Logger) {
 func printTableEntry(
 	r report,
 	targetHost string,
+	targetLocation string,
 	srcPort uint16,
 	foreground bool,
 	logger *log.Logger,
@@ -488,7 +500,8 @@ func printTableEntry(
 		timedOut = "yes"
 	}
 	if foreground {
-		fmt.Printf("%-51s|%3s", targetHost+"("+strconv.Itoa(int(srcPort))+")", "")
+		fmt.Printf("%-51s|", targetHost+"("+strconv.Itoa(int(srcPort))+")")
+		fmt.Printf("%-26s|%3s", " "+targetLocation, "")
 	}
 
 	if r.latency2Way == 0 {
@@ -517,7 +530,8 @@ func printTableEntry(
 
 	if !foreground {
 		logger.Info("Result",
-			zap.String("host", targetHost),
+			zap.String("target", targetHost),
+			zap.String("target_location", targetLocation),
 			zap.Uint16("source_port", srcPort),
 			twoWay,
 			oneWay,
