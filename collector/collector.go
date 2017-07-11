@@ -383,8 +383,8 @@ func statsUpload(
 	}
 
 	tags := map[string]string{
-		"location":        glr.Location,
 		"host":            glr.HostName,
+		"host_location":   glr.Location,
 		"target":          remote.Hostname,
 		"target_location": remote.Location,
 		"dscp":            strconv.Itoa(int(QOSDSCP)),
@@ -463,8 +463,8 @@ func printTableHeader(gl *config.Global, currentDSCP string, logger *log.Logger)
 	} else {
 		logger.Info("Arachne -- Table of Results",
 			zap.String("version", defines.ArachneVersion),
-			zap.String("hostname", gl.RemoteConfig.HostName),
-			zap.String("location", gl.RemoteConfig.Location),
+			zap.String("host", gl.RemoteConfig.HostName),
+			zap.String("host_location", gl.RemoteConfig.Location),
 			zap.Uint16("target_TCP_port", gl.RemoteConfig.TargetTCPPort),
 			zap.String("QoS_DSCP", currentDSCP),
 		)
@@ -531,7 +531,7 @@ func printTableEntry(
 	if !foreground {
 		logger.Info("Result",
 			zap.String("target", targetHost),
-			zap.String("location", targetLocation),
+			zap.String("target_location", targetLocation),
 			zap.Uint16("source_port", srcPort),
 			twoWay,
 			oneWay,
