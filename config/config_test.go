@@ -72,6 +72,8 @@ func TestReadConfig(t *testing.T) {
 		logger)
 	assert.NoError(err, "error parsing YAML test configuration file: %v", err)
 
+	assert.Equal("us-west", gl.RemoteConfig.Location,
+		"error parsing 'location' from YAML test configuration file")
 	assert.Equal(44111, int(gl.RemoteConfig.TargetTCPPort),
 		"error parsing 'listen_tcp_port' from YAML test configuration file")
 	assert.Equal(31000, int(gl.RemoteConfig.SrcTCPPortRange[0]),
@@ -83,17 +85,18 @@ func TestReadConfig(t *testing.T) {
 	assert.False(gl.RemoteConfig.QoSEnabled, "error parsing QoS from YAML test configuration file")
 	assert.True(gl.RemoteConfig.ResolveDNS, "error parsing resolve_dns from YAML test configuration file")
 
-	if _, ok := remotes["10.10.15.27"]; !ok {
+	if r1, ok := remotes["10.10.39.31"]; !ok {
 		t.Errorf("Remotes are %+v in %s", remotes, testConfigFilePath)
 		t.Error("failed to parse a remote target")
+	} else {
+		assert.Equal("us-west", r1.Location,
+			"error parsing location of an 'internal' target from YAML test configuration file")
 	}
 
-	if !assert.Equal(int64(10500000000000), int64(gl.RemoteConfig.PollOrchestratorInterval.Success)) {
-		t.Error("error parsing 'poll_orchestrator_interval_success' from YAML test configuration file")
-	}
-	if !assert.Equal(int64(60000000000), int64(gl.RemoteConfig.PollOrchestratorInterval.Failure)) {
-		t.Error("error parsing 'poll_orchestrator_interval_failure' from YAML test configuration file")
-	}
+	assert.Equal(int64(10500000000000), int64(gl.RemoteConfig.PollOrchestratorInterval.Success),
+		"error parsing 'poll_orchestrator_interval_success' from YAML test configuration file")
+	assert.Equal(int64(60000000000), int64(gl.RemoteConfig.PollOrchestratorInterval.Failure),
+		"error parsing 'poll_orchestrator_interval_failure' from YAML test configuration file")
 }
 
 func TestDownloadTargetFileFromOrchestrator(t *testing.T) {
