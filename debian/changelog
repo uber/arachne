@@ -1,3 +1,7 @@
+arachne (0.5.3) unstable; urgency=low
+  * Add support for target location info
+ -- Vasileios Lakafosis <lakafosi@uber.com>  Fri, 11 July 2017 12:40:00 +0000
+
 arachne (0.2.0) unstable; urgency=low
   * Initial open-source release
  -- Vasileios Lakafosis <lakafosi@uber.com>  Fri, 23 Dec 2016 14:30:00 +0000
