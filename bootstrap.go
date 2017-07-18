@@ -184,7 +184,8 @@ func Run(ec *config.Extended, opts ...Option) {
 
 		select {
 		case <-configRefresh.C:
-			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode, gl.RemoteConfig.ResolveDNS)
+			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode,
+				*gl.CLI.SenderOnlyMode, gl.RemoteConfig.ResolveDNS)
 			log.ResetLogFiles(gl.App.Logging.OutputPaths, d.LogFileSizeMaxMB, d.LogFileSizeKeepKB, logger)
 			logger.Info("Refreshing target list file, if needed")
 			configRefresh.Stop()

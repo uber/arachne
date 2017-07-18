@@ -21,16 +21,12 @@
 package ip
 
 import (
-	"errors"
 	"net"
-
-	"golang.org/x/net/bpf"
 
 	"github.com/uber/arachne/defines"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"golang.org/x/net/bpf"
 )
 
 func bindToDevice(s int, ifname string) error {
@@ -68,9 +64,4 @@ func getIPHeaderLayerV4(tos DSCPValue, tcpLen uint16, srcIP net.IP, dstIP net.IP
 	header.Flags = nf
 
 	return header
-}
-
-// attachBPF will attach an assembled BPF filter to the recvSource's raw socket file descriptor
-func (r *recvSource) attachBPF(filter []bpf.RawInstruction) error {
-	return errors.New("BPF Filter currently not supported on Darwin")
 }

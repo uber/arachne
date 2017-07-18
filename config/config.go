@@ -32,6 +32,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
@@ -40,7 +41,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
-	"github.com/uber/arachne/defines"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/validator.v2"

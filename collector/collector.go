@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket/layers"
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/ip"
@@ -36,6 +35,7 @@ import (
 	"github.com/uber/arachne/metrics"
 
 	"github.com/fatih/color"
+	"github.com/google/gopacket/layers"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

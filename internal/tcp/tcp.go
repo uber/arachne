@@ -27,12 +27,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/uber/arachne/defines"
 	"github.com/uber/arachne/internal/ip"
 	"github.com/uber/arachne/internal/log"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/pkg/errors"
 	"github.com/spacemonkeygo/monotime"
 	"go.uber.org/zap"
@@ -88,16 +88,16 @@ type Message struct {
 	Ack     uint32
 }
 
+// FromExternalTarget returns true if message has been received from external server and not an arachne agent.
+func (m Message) FromExternalTarget(servicePort layers.TCPPort) bool {
+	return m.DstPort != servicePort
+}
+
 // Timestamp holds all the different types of time stamps.
 type Timestamp struct {
 	Unix    time.Time
 	Run     time.Time
 	Payload time.Time
-}
-
-// FromExternalTarget returns true if message has been received from external server and not an arachne agent.
-func (m Message) FromExternalTarget(servicePort layers.TCPPort) bool {
-	return m.DstPort != servicePort
 }
 
 var (
@@ -111,17 +111,17 @@ func parsePktTCP(pkt gopacket.Packet) (layers.TCP, time.Time, error) {
 	if layer == nil {
 		return layers.TCP{}, time.Time{}, errors.New("invalid TCP layer")
 	}
-	tcp := layer.(*layers.TCP)
+	tcpSegment := layer.(*layers.TCP)
 
 	var payload time.Time
-	if len(tcp.Payload) >= defines.TimestampPayloadLengthBytes {
-		ts := append([]byte(nil), tcp.Payload[:defines.TimestampPayloadLengthBytes]...)
+	if len(tcpSegment.Payload) >= defines.TimestampPayloadLengthBytes {
+		ts := append([]byte(nil), tcpSegment.Payload[:defines.TimestampPayloadLengthBytes]...)
 		if err := payload.UnmarshalBinary(ts); err != nil {
-			return *tcp, time.Time{}, err
+			return *tcpSegment, time.Time{}, err
 		}
 	}
 
-	return *tcp, payload, nil
+	return *tcpSegment, payload, nil
 }
 
 // parsePktIP parses the IP header of an incoming packet and extracts the src IP addr and DSCP value.
@@ -270,7 +270,7 @@ func Receiver(
 				seqNum := rand.Uint32()
 				ackNum := tcpHeader.Seq + 1
 				flags := tcpFlags{syn: true, ack: true}
-				// Replies are sent to the same port as this agent is listening on (conn.ListenPort)
+				// Replies are sent to the same port as the one this agent is listening on
 				if err := send(conn, &srcIP, conn.ListenPort, srcPortRange, DSCPv,
 					flags, seqNum, ackNum, sentC, kill, logger); err != nil {
 					logger.Error("failed to send SYN-ACK", zap.Error(err))
