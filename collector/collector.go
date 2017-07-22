@@ -148,6 +148,7 @@ func (rs resultStore) walkResults(
 		if remote.External {
 			qos = ip.DSCPBeLow
 		}
+
 		for srcPort, rep := range r[(ip.GetDSCP).Pos(qos, logger)] {
 			walkerF[0](rep, remote.Hostname, remote.Location, srcPort, foreground, logger)
 		}
