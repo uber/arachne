@@ -28,7 +28,7 @@ import (
 // Global constants
 const (
 	ArachneService                  = "arachne"
-	ArachneVersion                  = "0.5.3" //TODO Read from file version.git
+	ArachneVersion                  = "0.6.0" //TODO Read from file version.git
 	ArachneTestConfigFilePathLinux  = "../arachned/config/test_target_config_linux.json"
 	ArachneTestConfigFilePathDarwin = "../arachned/config/test_target_config_darwin.json"
 	BatchIntervalEchoingPerc        = 0.75

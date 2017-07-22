@@ -1,3 +1,7 @@
+arachne (0.6.0) unstable; urgency=low
+  * Refactor sending and receiving of packets
+ -- Henri Devieux <hdevieux@uber.com>  Sat, 22 July 2017 09:35:28 +0000
+
 arachne (0.5.3) unstable; urgency=low
   * Add support for target location info
  -- Vasileios Lakafosis <lakafosi@uber.com>  Fri, 11 July 2017 12:40:00 +0000
