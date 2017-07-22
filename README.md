@@ -5,7 +5,7 @@ system. It provides fast and easy active end-to-end functional testing
 of all the components in Data Center and Cloud infrastructures.
 Arachne is able to detect intra-DC, inter-DC, DC-to-Cloud, and
 DC-to-External-Services issues by generating minimal traffic:
- 
+
 - Reachability
 - Round-trip and 1-way latency
 - Silent packet drops and black holes
@@ -13,10 +13,6 @@ DC-to-External-Services issues by generating minimal traffic:
 - PMTU or Firewall issues too related possibly to network config changes
 (accidental or not)
 - Whether network-level SLAs are met
-
-## Requirements
-
- * libpcap
 
 ## Usage
 
@@ -33,8 +29,8 @@ Import this package and call Arachne from your program/service with
 where the option provided above is among the few optional ones.
 
 
-Below is the list of all the CLI options available, when Arachne is 
-used as a standalone program. The default options should be good 
+Below is the list of all the CLI options available, when Arachne is
+used as a standalone program. The default options should be good
 enough for most users.
 
 ```
@@ -72,6 +68,14 @@ Arachne is granted access to raw sockets without the need to run with sudo or
 as root user, by being granted `CAP_NET_RAW` capability
 (see: [capabilities][]).
 
+
+### Note on BPF filtering
+
+When receiving packets, Arachne attempts to apply a BPF filter to the raw socket
+so that processing of packets occurs on a much smaller set (ones destined
+specifically for Arachne agent testing). This is currently supported only on
+Linux and thus performance will be worse on BSD-based systems where a larger
+number of packets must be inspected.
 
 <hr>
 

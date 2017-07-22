@@ -7,7 +7,6 @@ import:
 - package: github.com/google/gopacket
   version: ^1
   subpackages:
-  - pcap
   - layers
 - package: github.com/jawher/mow.cli
 - package: github.com/miekg/dns
@@ -18,9 +17,13 @@ import:
   version: ^1
   subpackages:
   - zapcore
+- package: golang.org/x/net
+  subpackages:
+  - bpf
 - package: gopkg.in/validator.v2
 - package: gopkg.in/yaml.v2
 testImport:
 - package: github.com/stretchr/testify
   subpackages:
   - assert
+  - require

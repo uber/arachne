@@ -29,12 +29,14 @@ import (
 
 	"github.com/uber/arachne/config"
 	"github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/ip"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/network"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/internal/util"
 	"github.com/uber/arachne/metrics"
 
+	"github.com/google/gopacket/layers"
 	"github.com/spacemonkeygo/monotime"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -45,8 +47,8 @@ func statsUploadMock(
 	sr metrics.Reporter,
 	target string,
 	remotes config.RemoteStore,
-	QOSDSCP tcp.DSCPValue,
-	srcPort uint16,
+	QOSDSCP ip.DSCPValue,
+	srcPort layers.TCPPort,
 	r *report,
 	logger *log.Logger,
 ) {
@@ -70,8 +72,8 @@ func TestRun(t *testing.T) {
 	unreachableTarget := net.IPv4(21, 0, 0, 1)
 	sourceIPv6 := net.IP{0x20, 0x01, 0x06, 0x13, 0x93, 0xFF, 0x8B, 0x40, 0, 0, 0, 0, 0, 0, 0, 1}
 	targetIPv6 := net.IP{0x20, 0x04, 0x0B, 0xBD, 0x03, 0x2F, 0x0E, 0x41, 0, 0, 0, 0, 0, 0, 0, 2}
-	currentDSCP := tcp.DSCPBulkHigh
-	sp := uint16(32000)
+	currentDSCP := ip.DSCPBulkHigh
+	sp := layers.TCPPort(32000)
 	CLIArgs := config.CLIConfig{
 		SenderOnlyMode: func() *bool { b := false; return &b }(),
 		Foreground:     func() *bool { b := false; return &b }(),
@@ -117,7 +119,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: source,
 		DstAddr: target,
-		Af:      network.Family(&target),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -131,7 +133,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoReply,
 		SrcAddr: target,
 		DstAddr: source,
-		Af:      network.Family(&source),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -146,7 +148,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: source,
 		DstAddr: unreachableTarget,
-		Af:      network.Family(&unreachableTarget),
+		Af:      defines.AfInet,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -160,7 +162,7 @@ func TestRun(t *testing.T) {
 		Type:    tcp.EchoRequest,
 		SrcAddr: sourceIPv6,
 		DstAddr: targetIPv6,
-		Af:      network.Family(&targetIPv6),
+		Af:      defines.AfInet6,
 		SrcPort: sp,
 		QosDSCP: currentDSCP,
 		Ts: tcp.Timestamp{
@@ -177,9 +179,9 @@ func TestRun(t *testing.T) {
 	finishedCycleUpload.Wait()
 
 	assert := assert.New(t)
-	_, existsProbe := ms.existsSent(target.String(), (tcp.GetDSCP).Pos(currentDSCP, logger), sp)
+	_, existsProbe := ms.existsSent(target.String(), (ip.GetDSCP).Pos(currentDSCP, logger), sp)
 	assert.True(existsProbe, "Probe to "+target.String()+" should exist in 'sent' of messageStore")
-	_, existsReply := ms.existsRcvd(target.String(), (tcp.GetDSCP).Pos(currentDSCP, logger), sp)
+	_, existsReply := ms.existsRcvd(target.String(), (ip.GetDSCP).Pos(currentDSCP, logger), sp)
 	assert.True(existsReply, "Reply from "+target.String()+" should exist in 'rcvd' of messageStore")
 	assert.Contains(ms, targetIPv6.String(), "Probe to "+targetIPv6.String()+
 		" should exist in 'sent' of messageStore")

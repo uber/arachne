@@ -29,6 +29,7 @@ import (
 	"github.com/uber/arachne/collector"
 	"github.com/uber/arachne/config"
 	d "github.com/uber/arachne/defines"
+	"github.com/uber/arachne/internal/ip"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/internal/tcp"
 	"github.com/uber/arachne/internal/util"
@@ -86,12 +87,15 @@ func Run(ec *config.Extended, opts ...Option) {
 		logger.Error("error initializing stats", zap.Error(err))
 	}
 
+	// Hold raw socket connection for IPv4 packets
+	var connIPv4 *ip.Conn
+
 	logger.Info("Starting up arachne")
 
 	for {
 		var (
 			err                 error
-			currentDSCP         tcp.DSCPValue
+			currentDSCP         ip.DSCPValue
 			dnsWg               sync.WaitGroup
 			finishedCycleUpload sync.WaitGroup
 		)
@@ -120,7 +124,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			dnsRefresh := time.NewTicker(d.DNSRefreshInterval)
 			dnsWg.Add(1)
 			killC.DNSRefresh = make(chan struct{})
-			config.ResolveDnsTargets(gl.Remotes, gl.RemoteConfig, dnsRefresh, &dnsWg,
+			config.ResolveDNSTargets(gl.Remotes, gl.RemoteConfig, dnsRefresh, &dnsWg,
 				killC.DNSRefresh, logger)
 			dnsWg.Wait()
 			logger.Debug("Remotes after DNS resolution include",
@@ -131,6 +135,16 @@ func Run(ec *config.Extended, opts ...Option) {
 		// Channels for Collector to receive Probes and Responses from.
 		sentC := make(chan tcp.Message, d.ChannelOutBufferSize)
 		rcvdC := make(chan tcp.Message, d.ChannelInBufferSize)
+
+		// Connection for IPv4 packets
+		if connIPv4 == nil {
+			connIPv4 = ip.NewConn(
+				d.AfInet,
+				gl.RemoteConfig.TargetTCPPort,
+				gl.RemoteConfig.InterfaceName,
+				gl.RemoteConfig.SrcAddress,
+				logger)
+		}
 
 		// Actual echoing is a percentage of the total configured batch cycle duration.
 		realBatchInterval := time.Duration(float32(gl.RemoteConfig.BatchInterval) *
@@ -150,8 +164,7 @@ func Run(ec *config.Extended, opts ...Option) {
 		if !*gl.CLI.SenderOnlyMode {
 			// Listen for responses or probes from other IPv4 arachne agents.
 			killC.Receiver = make(chan struct{})
-			err = tcp.Receiver("ip4", &gl.RemoteConfig.SrcAddress, gl.RemoteConfig.TargetTCPPort,
-				gl.RemoteConfig.InterfaceName, sentC, rcvdC, killC.Receiver, logger)
+			err = tcp.Receiver(connIPv4, sentC, rcvdC, killC.Receiver, logger)
 			if err != nil {
 				logger.Fatal("IPv4 receiver failed to start", zap.Error(err))
 			}
@@ -163,7 +176,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			logger.Debug("Echoing...")
 			// Start echoing all targets.
 			killC.Echo = make(chan struct{})
-			tcp.EchoTargets(gl.Remotes, &gl.RemoteConfig.SrcAddress, gl.RemoteConfig.TargetTCPPort,
+			tcp.EchoTargets(gl.Remotes, connIPv4, gl.RemoteConfig.TargetTCPPort,
 				gl.RemoteConfig.SrcTCPPortRange, gl.RemoteConfig.QoSEnabled, &currentDSCP,
 				realBatchInterval, batchEndCycle, sentC, *gl.CLI.SenderOnlyMode,
 				completeCycleUpload, &finishedCycleUpload, killC.Echo, logger)
@@ -171,7 +184,8 @@ func Run(ec *config.Extended, opts ...Option) {
 
 		select {
 		case <-configRefresh.C:
-			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode, gl.RemoteConfig.ResolveDNS)
+			util.CleanUpRefresh(killC, *gl.CLI.ReceiverOnlyMode,
+				*gl.CLI.SenderOnlyMode, gl.RemoteConfig.ResolveDNS)
 			log.ResetLogFiles(gl.App.Logging.OutputPaths, d.LogFileSizeMaxMB, d.LogFileSizeKeepKB, logger)
 			logger.Info("Refreshing target list file, if needed")
 			configRefresh.Stop()
@@ -179,7 +193,7 @@ func Run(ec *config.Extended, opts ...Option) {
 			logger.Debug("Received SIG")
 			configRefresh.Stop()
 			util.CleanUpAll(killC, *gl.CLI.ReceiverOnlyMode, *gl.CLI.SenderOnlyMode,
-				gl.RemoteConfig.ResolveDNS, gl.App.PIDPath, sr, logger)
+				gl.RemoteConfig.ResolveDNS, connIPv4, gl.App.PIDPath, sr, logger)
 			logger.Info("Exiting")
 			os.Exit(0)
 		}

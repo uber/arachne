@@ -29,6 +29,10 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+func bindToDevice(s int, ifname string) error {
+	return nil
+}
+
 // GetIPLayerOptions is used to get the gopacket serialization options.
 func GetIPLayerOptions() gopacket.SerializeOptions {
 	return gopacket.SerializeOptions{
@@ -38,10 +42,10 @@ func GetIPLayerOptions() gopacket.SerializeOptions {
 	}
 }
 
-func getIPHeaderLayerV4(tos uint8, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
+func getIPHeaderLayerV4(tos DSCPValue, tcpLen uint16, srcIP net.IP, dstIP net.IP) *layers.IPv4 {
 	header := &layers.IPv4{
 		Version:    4, // IP Version 4
-		TOS:        tos,
+		TOS:        uint8(tos),
 		IHL:        5,           // IHL: 20 bytes
 		Length:     tcpLen + 20, // Total IP packet length
 		FragOffset: 0,           // No fragmentation

@@ -30,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/uber/arachne/internal/ip"
 	"github.com/uber/arachne/internal/log"
 	"github.com/uber/arachne/metrics"
 
@@ -193,12 +194,15 @@ func CleanUpAll(
 	receiverOnlyMode bool,
 	senderOnlyMode bool,
 	resolveDNS bool,
+	conn *ip.Conn,
 	PIDPath string,
 	sr metrics.Reporter,
 	logger *log.Logger,
 ) {
 
 	CleanUpRefresh(killC, receiverOnlyMode, senderOnlyMode, resolveDNS)
+
+	conn.Close(logger)
 
 	sr.Close()
 

@@ -21,92 +21,126 @@
 package tcp
 
 import (
-	coreLog "log"
+	"encoding/hex"
 	"net"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/uber/arachne/defines"
-	"github.com/uber/arachne/internal/log"
-	"github.com/uber/arachne/internal/util"
+	"github.com/uber/arachne/internal/ip"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
+	"github.com/stretchr/testify/require"
 )
 
-func TestReceiver(t *testing.T) {
-	var interfaceName string
-	var err error
+type testPkt struct {
+	hexData string
+	name    string
+}
 
-	l, err := zap.NewDevelopment()
-	if err != nil {
-		coreLog.Fatal(err)
+func TestParsePktTCP(t *testing.T) {
+	assert := assert.New(t)
+
+	pkt := testPkt{
+		hexData: "4500003791cc4000380651910a01010a0a00000a7918ac4f768dae70fbf6c7115012aaaa9aed0000010000000ed0de286824a952740000",
+		name:    "TCP test packet (ipv4), TCP Src Port: 31000, TCP Dst Port 44111, payload TimeStamp: 2017-06-22T21:06:48.615076468+00:00",
 	}
-	logger := &log.Logger{
-		Logger:    l,
-		PIDPath:   "",
-		RemovePID: util.RemovePID,
+	data, _ := hex.DecodeString(pkt.hexData)
+
+	createdPkt := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
+	require.NotNil(t, createdPkt, "creating packet %s failed", pkt.name)
+
+	tcpHeader, payload, err := parsePktTCP(createdPkt)
+	require.NoError(t, err, "decoding TCP header from packet %s failed: %v", pkt.name, err)
+
+	assert.Equal(tcpHeader.SrcPort, layers.TCPPort(31000), "unexpectedly formatted TCP Src Port")
+	assert.Equal(tcpHeader.DstPort, layers.TCPPort(44111), "unexpectedly formatted TCP Dst Port")
+
+	expectedTime, err := time.Parse(time.RFC3339, "2017-06-22T21:06:48.615076468+00:00")
+	require.NoError(t, err, "parsing timestamp from TCP packet %s failed: %v", pkt.name, err)
+
+	assert.Equal(payload, expectedTime, "unexpectedly formatted TCP payload timestamp")
+}
+
+func TestParsePktIP(t *testing.T) {
+	assert := assert.New(t)
+
+	pkt := testPkt{
+		hexData: "4558003791cc4000380651910a01010a0a00000a7918ac4f768dae70fbf6c7115012aaaa9aed0000010000000ed0de286824a952740000",
+		name:    "IPv4 test packet, Src IP 10.1.1.10, DSCP value 88",
 	}
 
-	switch runtime.GOOS {
-	case "linux":
-		interfaceName = "eth0"
-	case "darwin":
-		interfaceName = "en0"
-	default:
-		t.Fatalf("unsupported OS for testing: " + runtime.GOOS)
-	}
+	data, _ := hex.DecodeString(pkt.hexData)
+	createdPkt := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Default)
+	require.NotNil(t, createdPkt, "creating packet %s failed", pkt.name)
 
-	srcIP := net.IPv4(10, 0, 0, 1)
-	sentC := make(chan Message, defines.ChannelOutBufferSize)
-	rcvdC := make(chan Message, defines.ChannelInBufferSize)
-	receiverDone := make(chan struct{})
-	err = Receiver("ipInvalid", &srcIP, 44111, interfaceName, sentC, rcvdC, receiverDone, logger)
-	assert.Error(t, err, "Non IPv4 or IPv6 family should not be handled")
-	close(receiverDone)
+	srcIP, dscpv, err := parsePktIP(createdPkt)
+	require.NoError(t, err, "decoded IP Header from packet %s failed: %v", pkt.name, err)
 
-	err = Receiver("ip4", &srcIP, 44111, interfaceName, sentC, rcvdC, receiverDone, logger)
-	if err == nil {
-		t.Fatal("Non IPv4 or IPv6 family should not be handled")
-	}
-
+	expectedIP := net.ParseIP("10.1.1.10")
+	assert.Equal(expectedIP.Equal(srcIP), true, "unexpectedly formatted Src IP address")
+	assert.Equal(dscpv, ip.DSCPValue(88), "unexpectedly formatted IP Header DSCP value")
 }
 
 func TestMakePkt(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		af             string
-		srcAddr        net.IP
-		dstAddr        net.IP
-		srcPort        uint16
-		dstPort        uint16
-		expectedPacket = []byte{}
-		packet         = []byte{}
-		err            error
+		af          int
+		srcAddr     net.IP
+		dstAddr     net.IP
+		srcPort     layers.TCPPort
+		dstPort     layers.TCPPort
+		expectedPkt testPkt
+		want        []byte
+		err         error
 	)
 
-	af = "ip4"
+	// IPv4
+	af = defines.AfInet
 	srcAddr = net.IPv4(10, 0, 0, 1)
 	dstAddr = net.IPv4(20, 0, 0, 1)
-	srcPort = uint16(31100)
-	dstPort = uint16(44111)
-	expectedPacket = []byte{121, 124, 172, 79, 0, 0, 0, 100, 0, 0, 0, 0, 80, 2, 170, 170, 193, 6, 0, 0}
-	packet, err = makePkt(af, &srcAddr, &dstAddr, srcPort, dstPort, syn, 100, 0)
-	if err != nil {
-		t.Fatalf("error creating an IPv4 TCP SYN packet (%v)", err)
+	srcPort = layers.TCPPort(31100)
+	dstPort = layers.TCPPort(44111)
+	// Darwin uses Host-byte order for Length and FragOffset in IPv4 Headers
+	switch runtime.GOOS {
+	case "linux":
+		expectedPkt = testPkt{
+			hexData: "456400280000000040065c6b0a00000114000001797cac4f00000000000000005002aaaac16a0000",
+			name:    "Linux IPv4/TCP test Packet, SrcIP: 10.0.0.1, DstIP: 20.0.0.1, SrcPort 31100, DstPort: 44111, Flags: SYN",
+		}
+	case "darwin":
+		expectedPkt = testPkt{
+			hexData: "4564280000000000400634930a00000114000001797cac4f00000000000000005002aaaac16a0000",
+			name:    "Darwin IPv4/TCP test Packet, SrcIP: 10.0.0.1, DstIP: 20.0.0.1, SrcPort 31100, DstPort: 44111, Flags: SYN",
+		}
+	default:
+		t.Fatalf("unsupported OS for testing: " + runtime.GOOS)
 	}
-	assert.Equal(expectedPacket, packet, "unexpectedly formatted IPv4 TCP SYN packet generated")
 
-	af = "ip6"
+	want, _ = hex.DecodeString(expectedPkt.hexData)
+	got, err := makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
+	require.NoError(t, err, "creating IPv4 TCP packet %s failed: %v", expectedPkt.name, err)
+
+	assert.Equal(got, want, "unexpectedly formatted IPv4 TCP Syn packet generated")
+
+	// IPv6
+	af = defines.AfInet6
 	srcAddr = net.IP{0x20, 0x01, 0x06, 0x13, 0x93, 0xFF, 0x8B, 0x40, 0, 0, 0, 0, 0, 0, 0, 1}
 	dstAddr = net.IP{0x20, 0x04, 0x0B, 0xBD, 0x03, 0x2F, 0x0E, 0x41, 0, 0, 0, 0, 0, 0, 0, 2}
-	srcPort = uint16(1200)
-	dstPort = uint16(44)
-	expectedPacket = []byte{4, 176, 0, 44, 0, 0, 0, 100, 0, 0, 0, 0, 80, 2, 170, 170, 125, 112, 0, 0}
-	packet, err = makePkt(af, &srcAddr, &dstAddr, srcPort, dstPort, syn, 100, 0)
-	if err != nil {
-		t.Fatalf("error creating an IPv6 TCP SYN packet (%v)", err)
+	srcPort = layers.TCPPort(1200)
+	dstPort = layers.TCPPort(44)
+	expectedPkt = testPkt{
+		hexData: "66400000001406002001061393ff8b40000000000000000120040bbd032f0e41000000000000000204b0002c00000000000000005002aaaa7dd40000",
+		name:    "IPv6/TCP test Packet, SrcIP: 2001:613:93ff:8b40::1, DstIP: 2004:bbd:32f:e41::2, SrcPort 1200, DstPort: 44, Flags: SYN",
 	}
-	assert.Equal(expectedPacket, packet, "unexpectedly formatted IPv6 TCP SYN packet generated")
+
+	want, _ = hex.DecodeString(expectedPkt.hexData)
+	got, err = makePkt(af, srcAddr, dstAddr, srcPort, dstPort, 100, tcpFlags{syn: true}, 0, 0)
+	require.NoError(t, err, "creating IPv6 TCP packet %s failed: %v", expectedPkt.name, err)
+
+	assert.Equal(want, got, "unexpectedly formatted IPv6 TCP Syn packet generated")
 }

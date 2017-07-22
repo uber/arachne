@@ -38,16 +38,21 @@ const (
 	DNSRefreshInterval              = 12 * time.Hour
 	HTTPResponseHeaderTimeout       = 10 * time.Second
 	IPTTL                           = 64
+	IPv4HeaderLength                = 20
+	IPv6HeaderLength                = 40
 	LogFileSizeMaxMB                = 15
 	LogFileSizeKeepKB               = 250
 	OrchestratorRESTConf            = "conf"
 	MaxNumRemoteTargets             = 250
 	MaxNumSrcTCPPorts               = 512
+	MaxPacketSizeBytes              = 1500
 	MinBatchInterval                = 10 * time.Second
 	NumQOSDCSPValues                = 11
 	PcapMaxSnapLen                  = 128
 	PortHTTP                        = 80
 	PortHTTPS                       = 443
+	TCPHeaderLength                 = 20
+	TCPWindowSize                   = 0xaaaa
 	TimestampPayloadLengthBytes     = 15
 )
 
