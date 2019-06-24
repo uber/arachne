@@ -30,7 +30,7 @@ include /usr/share/dpkg/default.mk
 
 BINNAME = arachne
 DESTBINDIR = /usr/bin
-DESTCFGDIR = /etc/$(BINNAME)
+DESTCFGDIR = /usr/local/etc/$(BINNAME)
 DESTLOGDIR = /var/$(BINNAME)
 
 install/arachne::

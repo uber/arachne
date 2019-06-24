@@ -55,8 +55,8 @@ system for Data Center and Cloud infrastructures.
 Options:
   -v, --version                                     Show the version and exit
   --foreground=false                                Force foreground mode
-  -c, --config_file="/etc/arachne/arachne.yaml"     Configuration file path
-  (default: /etc/arachne/arachne.yaml)
+  -c, --config_file="/usr/local/etc/arachne/arachne.yaml"     Config file path
+  (default: /usr/local/etc/arachne/arachne.yaml)
   --receiver_only=false                             Force TCP receiver-only mode
   --sender_only=false                               Force TCP sender-only mode
 ```
