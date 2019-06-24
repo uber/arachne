@@ -1,66 +1,80 @@
-hash: 7e94fcaba10efa96d8b4f69b4de027c397486b92f500a0d71523cba6f9f6bfed
-updated: 2019-06-24T12:18:37.966599398-07:00
+hash: c3c1e764f5fabc3784d0aa6113023375d0047811bebd6d3d0348d6f02ef234c5
+updated: 2019-06-24T13:53:31.801263074-07:00
 imports:
 - name: github.com/DataDog/datadog-go
-  version: 909c02b65dd8a52e8fa6072db9752a112227cf21
+  version: 8a2a04a8934ddfed041b578a82119e6616f2c4e7
   subpackages:
   - statsd
 - name: github.com/fatih/color
-  version: dea9d3a26a087187530244679c1cfb3a42937794
+  version: 3f9d52f7176a6927daacff70a3e8d1dc2025c53e
 - name: github.com/google/gopacket
   version: 6d3e2615da4ed2ed2a349918fe74e7e6d03482fa
   subpackages:
   - layers
 - name: github.com/jawher/mow.cli
-  version: 772320464101e904cd51198160eb4d489be9cc49
+  version: 9b8ce431ec028691b79d71211c3848f1ad4078d7
+  subpackages:
+  - internal/container
+  - internal/flow
+  - internal/fsm
+  - internal/lexer
+  - internal/matcher
+  - internal/parser
+  - internal/values
 - name: github.com/mattn/go-colorable
-  version: 9056b7a9f2d1f2d96498d6d146acd1f9d5ed3d59
+  version: 8029fb3788e5a4a9c00e415f586a6d033f5d38b3
 - name: github.com/mattn/go-isatty
-  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+  version: 1311e847b0cb909da63b5fecfb5370aa66236465
 - name: github.com/miekg/dns
-  version: 5d001d020961ae1c184f9f8152fdc73810481677
+  version: 7f2bf8764aadba1e6d801bac04646ccfc52c0f84
 - name: github.com/pkg/errors
-  version: ff09b135c25aae272398c51a07235b90a75aa4f0
+  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/spacemonkeygo/monotime
-  version: cdd56516a92a4dc680379a26524c9c3d59d79ec0
+  version: e3f48a95f98a18c3a2388f616480ec98ff5ba8e3
   subpackages:
   - _cgo
-- name: github.com/uber-go/zap
-  version: 27376062155ad36be76b0f12cf1572a221d3a48c
-  subpackages:
-  - zapcore
 - name: github.com/uber/uber-licence
-  version: e35b7f99af2d110505bc81d8a9449dafaa326730
+  version: e7a9dc5058201e1ddc8f5d4d4ebcaca66a755b0f
 - name: go.uber.org/atomic
   version: df976f2515e274675050de7b3f42545de80594fd
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: 6a4e056f2cc954cfec3581729e758909604b3f76
+  version: 27376062155ad36be76b0f12cf1572a221d3a48c
   subpackages:
   - buffer
   - internal/bufferpool
   - internal/color
   - internal/exit
-  - internal/multierror
   - zapcore
+- name: golang.org/x/crypto
+  version: cc06ce4a13d484c0101a9e92913248488a75786d
+  subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
 - name: golang.org/x/net
-  version: 570fa1c91359c1869590e9cedf3b53162a51a167
+  version: 3b0461eec859c4b73bb64fdc8285971fd33e3938
   subpackages:
   - bpf
+  - internal/iana
+  - internal/socket
+  - ipv4
+  - ipv6
 - name: gopkg.in/validator.v2
-  version: 3e4f037f12a1221a0864cf0dd2e81c452ab22448
+  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:
 - name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  version: 34c6fa2dc70986bccbbffcc6130f6920a924b075
   subpackages:
   - assert
   - require

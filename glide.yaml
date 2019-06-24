@@ -12,8 +12,9 @@ import:
 - package: github.com/miekg/dns
 - package: github.com/pkg/errors
 - package: github.com/spacemonkeygo/monotime
+  version: e3f48a95f98a18c3a2388f616480ec98ff5ba8e3
 - package: github.com/uber/uber-licence
-- package: github.com/uber-go/zap
+- package: go.uber.org/zap
   version: ^1
   subpackages:
   - zapcore
