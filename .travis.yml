@@ -2,17 +2,32 @@ sudo: required
 
 language: go
 
-os:
-  - linux
-  - osx
-
 go:
   - 1.12.x
 
-install: make install_ci
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+    - os: osx
 
-script: make test
 
 cache:
   directories:
     - vendor
+
+addons:
+  apt:
+    packages:
+      - iproute2
+
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update          ; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install iproute2mac; fi
+
+install: make install_ci
+
+script:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ip a; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ip link; fi
+  - make test
