@@ -4,7 +4,7 @@ arachne:
     enabled: false
     addrport: 127.0.0.1:12345
     restVersion: api/v1
-  standaloneTargetConfig: /etc/arachne/target_config.json
+  standaloneTargetConfig: /usr/local/etc/arachne/target_config.json
 
 logging:
   stdout: true

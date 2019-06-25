@@ -1,2 +1,2 @@
 arachned/arachne /usr/bin
-arachned/config/* /etc/arachne/
+arachned/config/* /usr/local/etc/arachne/
