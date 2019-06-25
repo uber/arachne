@@ -5,16 +5,13 @@ import:
   - statsd
 - package: github.com/fatih/color
 - package: github.com/google/gopacket
-  version: ^1
   subpackages:
   - layers
 - package: github.com/jawher/mow.cli
 - package: github.com/miekg/dns
 - package: github.com/pkg/errors
 - package: github.com/spacemonkeygo/monotime
-- package: github.com/uber/uber-licence
-- package: github.com/uber-go/zap
-  version: ^1
+- package: go.uber.org/zap
   subpackages:
   - zapcore
 - package: golang.org/x/net
