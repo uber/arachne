@@ -1,15 +1,13 @@
+sudo: required
+
 language: go
 
 os:
   - linux
   - osx
 
-sudo: required
-
 go:
-  - 1.7
-  - 1.8
-  - tip
+  - 1.12.x
 
 install: make install_ci
 
