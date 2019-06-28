@@ -39,7 +39,7 @@ import (
 	"github.com/uber/arachne/metrics"
 
 	"github.com/google/gopacket/layers"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -47,7 +47,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const defaultConfigFile = "/etc/arachne/arachne.yaml"
+const defaultConfigFile = "/usr/local/etc/arachne/arachne.yaml"
 
 // BasicConfig holds the basic parameter configurations for the application.
 type BasicConfig struct {
